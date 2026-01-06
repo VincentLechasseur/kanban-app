@@ -4,6 +4,12 @@ import { api } from "../../../convex/_generated/api";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import { Globe, Home, Kanban, Plus } from "lucide-react";
 
@@ -75,22 +81,30 @@ export function Sidebar({ onCreateBoard }: SidebarProps) {
             No boards yet
           </p>
         ) : (
-          <div className="space-y-1">
-            {boards.map((board) => (
-              <Button
-                key={board._id}
-                variant="ghost"
-                className={cn(
-                  "w-full justify-start",
-                  boardId === board._id && "bg-accent text-accent-foreground"
-                )}
-                onClick={() => navigate(`/board/${board._id}`)}
-              >
-                <Kanban className="mr-2 h-4 w-4" />
-                <span className="truncate">{board.name}</span>
-              </Button>
-            ))}
-          </div>
+          <TooltipProvider delayDuration={300}>
+            <div className="space-y-1">
+              {boards.map((board) => (
+                <Tooltip key={board._id}>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      className={cn(
+                        "w-full justify-start",
+                        boardId === board._id && "bg-accent text-accent-foreground"
+                      )}
+                      onClick={() => navigate(`/board/${board._id}`)}
+                    >
+                      <Kanban className="mr-2 h-4 w-4 shrink-0" />
+                      <span className="truncate">{board.name}</span>
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent side="right">
+                    <p>{board.name}</p>
+                  </TooltipContent>
+                </Tooltip>
+              ))}
+            </div>
+          </TooltipProvider>
         )}
       </ScrollArea>
     </div>
