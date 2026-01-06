@@ -38,6 +38,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { UserAvatar } from "@/components/UserAvatar";
 import { Badge } from "@/components/ui/badge";
+import { EmojiPicker } from "@/components/EmojiPicker";
 import {
   Globe,
   Lock,
@@ -80,6 +81,7 @@ export function BoardPage() {
   const [chatOpen, setChatOpen] = useState(false);
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
+  const [icon, setIcon] = useState("");
   const [isUpdating, setIsUpdating] = useState(false);
 
   // Filter state
@@ -140,6 +142,7 @@ export function BoardPage() {
   const handleEdit = () => {
     setName(board.name);
     setDescription(board.description ?? "");
+    setIcon(board.icon ?? "");
     setEditOpen(true);
   };
 
@@ -150,6 +153,7 @@ export function BoardPage() {
         id: board._id,
         name: name.trim(),
         description: description.trim() || undefined,
+        icon: icon || undefined,
       });
       toast.success("Board updated");
       setEditOpen(false);
@@ -441,7 +445,15 @@ export function BoardPage() {
           <div className="space-y-4 py-4">
             <div className="space-y-2">
               <Label htmlFor="edit-name">Board name</Label>
-              <Input id="edit-name" value={name} onChange={(e) => setName(e.target.value)} />
+              <div className="flex gap-2">
+                <EmojiPicker value={icon} onChange={setIcon} />
+                <Input
+                  id="edit-name"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  className="flex-1"
+                />
+              </div>
             </div>
             <div className="space-y-2">
               <Label htmlFor="edit-description">Description</Label>

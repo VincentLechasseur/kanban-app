@@ -16,6 +16,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
+import { EmojiPicker } from "@/components/EmojiPicker";
 import { Plus, Kanban, Users, MessageCircle } from "lucide-react";
 import { toast } from "sonner";
 
@@ -27,6 +28,7 @@ export function HomePage() {
   const [isOpen, setIsOpen] = useState(false);
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
+  const [icon, setIcon] = useState("");
   const [isCreating, setIsCreating] = useState(false);
 
   const handleCreate = async () => {
@@ -36,11 +38,13 @@ export function HomePage() {
       const boardId = await createBoard({
         name: name.trim(),
         description: description.trim() || undefined,
+        icon: icon || undefined,
       });
       toast.success("Board created successfully");
       setIsOpen(false);
       setName("");
       setDescription("");
+      setIcon("");
       navigate(`/board/${boardId}`);
     } catch {
       toast.error("Failed to create board");
@@ -86,13 +90,17 @@ export function HomePage() {
             <div className="space-y-4 py-4">
               <div className="space-y-2">
                 <Label htmlFor="name">Board name</Label>
-                <Input
-                  id="name"
-                  placeholder="e.g., Product Roadmap"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  onKeyDown={(e) => e.key === "Enter" && handleCreate()}
-                />
+                <div className="flex gap-2">
+                  <EmojiPicker value={icon} onChange={setIcon} />
+                  <Input
+                    id="name"
+                    placeholder="e.g., Product Roadmap"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    onKeyDown={(e) => e.key === "Enter" && handleCreate()}
+                    className="flex-1"
+                  />
+                </div>
               </div>
               <div className="space-y-2">
                 <Label htmlFor="description">Description (optional)</Label>
@@ -140,7 +148,11 @@ export function HomePage() {
               >
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
-                    <Kanban className="text-primary h-5 w-5" />
+                    {board.icon ? (
+                      <span className="text-lg">{board.icon}</span>
+                    ) : (
+                      <Kanban className="text-primary h-5 w-5" />
+                    )}
                     {board.name}
                     {hasUnread && (
                       <span className="relative ml-auto">

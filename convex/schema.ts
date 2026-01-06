@@ -8,6 +8,7 @@ export default defineSchema({
   boards: defineTable({
     name: v.string(),
     description: v.optional(v.string()),
+    icon: v.optional(v.string()),
     ownerId: v.id("users"),
     memberIds: v.array(v.id("users")),
     isPublic: v.optional(v.boolean()),

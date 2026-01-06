@@ -77,7 +77,11 @@ export function Sidebar({ onCreateBoard }: SidebarProps) {
                       )}
                       onClick={() => navigate(`/board/${board._id}`)}
                     >
-                      <Kanban className="mr-2 h-4 w-4 shrink-0" />
+                      {board.icon ? (
+                        <span className="mr-2 shrink-0">{board.icon}</span>
+                      ) : (
+                        <Kanban className="mr-2 h-4 w-4 shrink-0" />
+                      )}
                       <span className="truncate text-left">{board.name}</span>
                     </Button>
                   </TooltipTrigger>

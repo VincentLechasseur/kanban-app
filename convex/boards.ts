@@ -43,6 +43,7 @@ export const create = mutation({
   args: {
     name: v.string(),
     description: v.optional(v.string()),
+    icon: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     const userId = await getAuthUserId(ctx);
@@ -51,6 +52,7 @@ export const create = mutation({
     const boardId = await ctx.db.insert("boards", {
       name: args.name,
       description: args.description,
+      icon: args.icon,
       ownerId: userId,
       memberIds: [],
       createdAt: Date.now(),
@@ -90,6 +92,7 @@ export const update = mutation({
     id: v.id("boards"),
     name: v.optional(v.string()),
     description: v.optional(v.string()),
+    icon: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     const userId = await getAuthUserId(ctx);
@@ -99,9 +102,10 @@ export const update = mutation({
     if (!board) throw new Error("Board not found");
     if (board.ownerId !== userId) throw new Error("Not authorized");
 
-    const updates: Partial<{ name: string; description: string }> = {};
+    const updates: Partial<{ name: string; description: string; icon: string }> = {};
     if (args.name !== undefined) updates.name = args.name;
     if (args.description !== undefined) updates.description = args.description;
+    if (args.icon !== undefined) updates.icon = args.icon;
 
     await ctx.db.patch(args.id, updates);
   },
