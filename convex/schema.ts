@@ -66,4 +66,12 @@ export default defineSchema({
     content: v.string(),
     createdAt: v.number(),
   }).index("by_board", ["boardId", "createdAt"]),
+
+  chatReadStatus: defineTable({
+    boardId: v.id("boards"),
+    userId: v.id("users"),
+    lastReadAt: v.number(),
+  })
+    .index("by_board_user", ["boardId", "userId"])
+    .index("by_user", ["userId"]),
 });

@@ -24,10 +24,18 @@ export function BoardChat({ boardId, open, onOpenChange }: BoardChatProps) {
   const messages = useQuery(api.messages.list, { boardId });
   const currentUser = useQuery(api.users.currentUser);
   const sendMessage = useMutation(api.messages.send);
+  const markAsRead = useMutation(api.messages.markAsRead);
 
   const [content, setContent] = useState("");
   const [isSending, setIsSending] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
+
+  // Mark as read when chat is opened
+  useEffect(() => {
+    if (open) {
+      markAsRead({ boardId });
+    }
+  }, [open, boardId, markAsRead]);
 
   // Scroll to bottom when messages change
   useEffect(() => {

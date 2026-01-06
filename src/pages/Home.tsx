@@ -21,11 +21,12 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Plus, Kanban, Users } from "lucide-react";
+import { Plus, Kanban, Users, MessageCircle } from "lucide-react";
 import { toast } from "sonner";
 
 export function HomePage() {
   const boards = useQuery(api.boards.list);
+  const unreadBoardIds = useQuery(api.messages.getUnreadBoards);
   const createBoard = useMutation(api.boards.create);
   const navigate = useNavigate();
   const [isOpen, setIsOpen] = useState(false);
@@ -142,31 +143,40 @@ export function HomePage() {
         </div>
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-          {boards.map((board) => (
-            <Card
-              key={board._id}
-              className="cursor-pointer transition-shadow hover:shadow-md"
-              onClick={() => navigate(`/board/${board._id}`)}
-            >
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Kanban className="h-5 w-5 text-primary" />
-                  {board.name}
-                </CardTitle>
-                {board.description && (
-                  <CardDescription className="line-clamp-2">
-                    {board.description}
-                  </CardDescription>
-                )}
-                {board.memberIds.length > 0 && (
-                  <div className="flex items-center gap-1 pt-2 text-sm text-muted-foreground">
-                    <Users className="h-4 w-4" />
-                    <span>{board.memberIds.length + 1} members</span>
-                  </div>
-                )}
-              </CardHeader>
-            </Card>
-          ))}
+          {boards.map((board) => {
+            const hasUnread = unreadBoardIds?.includes(board._id);
+            return (
+              <Card
+                key={board._id}
+                className="cursor-pointer transition-shadow hover:shadow-md"
+                onClick={() => navigate(`/board/${board._id}`)}
+              >
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Kanban className="h-5 w-5 text-primary" />
+                    {board.name}
+                    {hasUnread && (
+                      <span className="relative ml-auto">
+                        <MessageCircle className="h-4 w-4 text-muted-foreground" />
+                        <span className="absolute -right-1 -top-1 h-2 w-2 rounded-full bg-destructive" />
+                      </span>
+                    )}
+                  </CardTitle>
+                  {board.description && (
+                    <CardDescription className="line-clamp-2">
+                      {board.description}
+                    </CardDescription>
+                  )}
+                  {board.memberIds.length > 0 && (
+                    <div className="flex items-center gap-1 pt-2 text-sm text-muted-foreground">
+                      <Users className="h-4 w-4" />
+                      <span>{board.memberIds.length + 1} members</span>
+                    </div>
+                  )}
+                </CardHeader>
+              </Card>
+            );
+          })}
         </div>
       )}
     </div>

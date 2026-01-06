@@ -62,6 +62,10 @@ export function BoardPage() {
     api.joinRequests.getPendingCount,
     boardId ? { boardId: boardId as Id<"boards"> } : "skip"
   );
+  const hasUnreadMessages = useQuery(
+    api.messages.hasUnread,
+    boardId ? { boardId: boardId as Id<"boards"> } : "skip"
+  );
   const updateBoard = useMutation(api.boards.update);
   const deleteBoard = useMutation(api.boards.remove);
   const updateVisibility = useMutation(api.boards.updateVisibility);
@@ -229,9 +233,13 @@ export function BoardPage() {
           <Button
             variant="outline"
             size="icon"
+            className="relative"
             onClick={() => setChatOpen(true)}
           >
             <MessageCircle className="h-5 w-5" />
+            {hasUnreadMessages && (
+              <span className="absolute -right-1 -top-1 h-3 w-3 rounded-full bg-destructive" />
+            )}
           </Button>
 
           {/* Menu */}
