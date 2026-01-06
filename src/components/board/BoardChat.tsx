@@ -15,7 +15,6 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { UserAvatar } from "@/components/UserAvatar";
@@ -44,7 +43,7 @@ export function BoardChat({ boardId, open, onOpenChange }: BoardChatProps) {
   const [mentionSearch, setMentionSearch] = useState("");
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [selectedCard, setSelectedCard] = useState<Doc<"cards"> | null>(null);
-  const scrollRef = useRef<HTMLDivElement>(null);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
   // Mark as read when chat is opened
@@ -56,8 +55,8 @@ export function BoardChat({ boardId, open, onOpenChange }: BoardChatProps) {
 
   // Scroll to bottom when messages change
   useEffect(() => {
-    if (scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+    if (scrollContainerRef.current) {
+      scrollContainerRef.current.scrollTop = scrollContainerRef.current.scrollHeight;
     }
   }, [messages]);
 
@@ -110,15 +109,31 @@ export function BoardChat({ boardId, open, onOpenChange }: BoardChatProps) {
     const cursorPos = e.target.selectionStart ?? value.length;
     const textBeforeCursor = value.slice(0, cursorPos);
 
-    // Find the last @ or ! before cursor
+    // Check for bracket syntax first: @[ or ![
+    const lastAtBracket = textBeforeCursor.lastIndexOf("@[");
+    const lastExclamationBracket = textBeforeCursor.lastIndexOf("![");
+
+    // Check if we're inside an unclosed bracket mention
+    if (lastAtBracket !== -1 && !textBeforeCursor.slice(lastAtBracket).includes("]")) {
+      setMentionType("user");
+      setMentionSearch(textBeforeCursor.slice(lastAtBracket + 2));
+      return;
+    }
+    if (lastExclamationBracket !== -1 && !textBeforeCursor.slice(lastExclamationBracket).includes("]")) {
+      setMentionType("card");
+      setMentionSearch(textBeforeCursor.slice(lastExclamationBracket + 2));
+      return;
+    }
+
+    // Find the last @ or ! before cursor (simple mentions without brackets)
     const lastAtIndex = textBeforeCursor.lastIndexOf("@");
     const lastExclamationIndex = textBeforeCursor.lastIndexOf("!");
 
     // Check if we're in a mention context (no space between trigger and cursor)
-    if (lastAtIndex !== -1 && !textBeforeCursor.slice(lastAtIndex).includes(" ")) {
+    if (lastAtIndex !== -1 && lastAtIndex > lastAtBracket && !textBeforeCursor.slice(lastAtIndex).includes(" ")) {
       setMentionType("user");
       setMentionSearch(textBeforeCursor.slice(lastAtIndex + 1));
-    } else if (lastExclamationIndex !== -1 && !textBeforeCursor.slice(lastExclamationIndex).includes(" ")) {
+    } else if (lastExclamationIndex !== -1 && lastExclamationIndex > lastExclamationBracket && !textBeforeCursor.slice(lastExclamationIndex).includes(" ")) {
       setMentionType("card");
       setMentionSearch(textBeforeCursor.slice(lastExclamationIndex + 1));
     } else {
@@ -131,15 +146,34 @@ export function BoardChat({ boardId, open, onOpenChange }: BoardChatProps) {
     const cursorPos = inputRef.current?.selectionStart ?? content.length;
     const textBeforeCursor = content.slice(0, cursorPos);
 
-    // Find where the mention started
+    // Find where the mention started - check for bracket syntax first
     const triggerChar = mentionType === "user" ? "@" : "!";
-    const triggerIndex = textBeforeCursor.lastIndexOf(triggerChar);
+    const bracketTrigger = `${triggerChar}[`;
+    const bracketIndex = textBeforeCursor.lastIndexOf(bracketTrigger);
+    const simpleIndex = textBeforeCursor.lastIndexOf(triggerChar);
 
-    if (triggerIndex !== -1) {
-      const beforeTrigger = content.slice(0, triggerIndex);
+    // Determine if we're in bracket mode
+    const inBracketMode = bracketIndex !== -1 && !textBeforeCursor.slice(bracketIndex).includes("]");
+
+    // Use bracket syntax if text has spaces or if already in bracket mode
+    const needsBrackets = text.includes(" ") || inBracketMode;
+
+    if (inBracketMode) {
+      // Complete the bracket mention
+      const beforeTrigger = content.slice(0, bracketIndex);
       const afterCursor = content.slice(cursorPos);
-      const newContent = `${beforeTrigger}${triggerChar}${text} ${afterCursor}`;
+      const newContent = `${beforeTrigger}${triggerChar}[${text}] ${afterCursor}`;
       setContent(newContent);
+    } else if (simpleIndex !== -1) {
+      const beforeTrigger = content.slice(0, simpleIndex);
+      const afterCursor = content.slice(cursorPos);
+      if (needsBrackets) {
+        const newContent = `${beforeTrigger}${triggerChar}[${text}] ${afterCursor}`;
+        setContent(newContent);
+      } else {
+        const newContent = `${beforeTrigger}${triggerChar}${text} ${afterCursor}`;
+        setContent(newContent);
+      }
     }
 
     setMentionType(null);
@@ -218,12 +252,32 @@ export function BoardChat({ boardId, open, onOpenChange }: BoardChatProps) {
   });
 
   // Render message content with highlighted mentions
+  // Supports both @name, !name and @[name with spaces], ![name with spaces]
   const renderMessageContent = (text: string, isOwn: boolean) => {
-    // Simple regex to find @mentions and !cards
-    const parts = text.split(/(@\S+|!\S+)/g);
+    // Regex to find mentions: @word, !word, @[...], ![...]
+    const mentionRegex = /(@\[[^\]]+\]|!\[[^\]]+\]|@\S+|!\S+)/g;
+    const parts = text.split(mentionRegex);
+
     return parts.map((part, i) => {
-      if (part.startsWith("!")) {
-        // Card mention - clickable
+      if (part.startsWith("![")) {
+        // Bracket card mention - extract title without brackets
+        const cardTitle = part.slice(2, -1);
+        return (
+          <button
+            key={i}
+            className={`font-semibold underline decoration-2 underline-offset-2 hover:opacity-80 ${
+              isOwn ? "text-primary-foreground" : "text-foreground"
+            }`}
+            onClick={(e) => {
+              e.stopPropagation();
+              handleCardMentionClick(cardTitle);
+            }}
+          >
+            {part}
+          </button>
+        );
+      } else if (part.startsWith("!")) {
+        // Simple card mention
         const cardTitle = part.slice(1);
         return (
           <button
@@ -239,7 +293,7 @@ export function BoardChat({ boardId, open, onOpenChange }: BoardChatProps) {
             {part}
           </button>
         );
-      } else if (part.startsWith("@")) {
+      } else if (part.startsWith("@[") || part.startsWith("@")) {
         // User mention - just styled
         return (
           <span
@@ -259,15 +313,19 @@ export function BoardChat({ boardId, open, onOpenChange }: BoardChatProps) {
   return (
     <>
       <Sheet open={open} onOpenChange={onOpenChange}>
-        <SheetContent className="flex flex-col p-0 sm:max-w-md">
-          <SheetHeader className="border-b px-4 py-4">
+        <SheetContent className="flex h-full flex-col overflow-hidden p-0 sm:max-w-md">
+          <SheetHeader className="shrink-0 border-b px-4 py-4">
             <SheetTitle>Team Chat</SheetTitle>
             <SheetDescription className="sr-only">
               Chat with your team members
             </SheetDescription>
           </SheetHeader>
 
-          <ScrollArea className="flex-1 px-4" ref={scrollRef}>
+          {/* Scrollable messages area */}
+          <div
+            ref={scrollContainerRef}
+            className="flex-1 overflow-y-auto px-4"
+          >
             {messages === undefined ? (
               <div className="flex h-full items-center justify-center py-8">
                 <div className="h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent" />
@@ -329,9 +387,9 @@ export function BoardChat({ boardId, open, onOpenChange }: BoardChatProps) {
                 ))}
               </div>
             )}
-          </ScrollArea>
+          </div>
 
-          <div className="border-t p-4">
+          <div className="shrink-0 border-t p-4">
             {/* Mention suggestions popup */}
             {mentionType && suggestions.length > 0 && (
               <div className="mb-2 max-h-48 overflow-y-auto rounded-md border bg-popover p-1 shadow-md">
@@ -395,11 +453,11 @@ export function BoardChat({ boardId, open, onOpenChange }: BoardChatProps) {
                     <div className="space-y-2 text-sm">
                       <p className="font-semibold">Shortcuts</p>
                       <div className="flex items-center gap-2">
-                        <kbd className="rounded bg-muted px-1.5 py-0.5 text-xs">@</kbd>
+                        <kbd className="rounded border border-border bg-background px-1.5 py-0.5 text-xs font-mono">@</kbd>
                         <span>Mention a team member</span>
                       </div>
                       <div className="flex items-center gap-2">
-                        <kbd className="rounded bg-muted px-1.5 py-0.5 text-xs">!</kbd>
+                        <kbd className="rounded border border-border bg-background px-1.5 py-0.5 text-xs font-mono">!</kbd>
                         <span>Reference a card (clickable)</span>
                       </div>
                     </div>
