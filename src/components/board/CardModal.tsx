@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useQuery, useMutation } from "convex/react";
-import { format } from "date-fns";
+import { format, formatDistanceToNow } from "date-fns";
 import { api } from "../../../convex/_generated/api";
 import type { Doc, Id } from "../../../convex/_generated/dataModel";
 import { UserAvatar } from "@/components/UserAvatar";
@@ -23,7 +23,29 @@ import { Badge } from "@/components/ui/badge";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Separator } from "@/components/ui/separator";
-import { CalendarIcon, Check, Tag, Trash2, User, X } from "lucide-react";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import {
+  CalendarIcon,
+  Check,
+  MessageSquare,
+  Palette,
+  Send,
+  Tag,
+  Trash2,
+  User,
+  X,
+} from "lucide-react";
+
+const CARD_COLORS = [
+  { name: "None", value: null, color: "transparent" },
+  { name: "Red", value: "#ef4444", color: "#ef4444" },
+  { name: "Orange", value: "#f97316", color: "#f97316" },
+  { name: "Yellow", value: "#eab308", color: "#eab308" },
+  { name: "Green", value: "#22c55e", color: "#22c55e" },
+  { name: "Blue", value: "#3b82f6", color: "#3b82f6" },
+  { name: "Purple", value: "#a855f7", color: "#a855f7" },
+  { name: "Pink", value: "#ec4899", color: "#ec4899" },
+];
 import { toast } from "sonner";
 
 interface CardModalProps {
@@ -36,10 +58,14 @@ interface CardModalProps {
 export function CardModal({ card, boardId, open, onOpenChange }: CardModalProps) {
   const labels = useQuery(api.labels.list, { boardId });
   const members = useQuery(api.boards.getMembers, { boardId });
+  const comments = useQuery(api.comments.list, { cardId: card._id });
+  const currentUser = useQuery(api.users.currentUser);
   const updateCard = useMutation(api.cards.update);
   const deleteCard = useMutation(api.cards.remove);
   const setLabels = useMutation(api.cards.setLabels);
   const setAssignees = useMutation(api.cards.setAssignees);
+  const addComment = useMutation(api.comments.add);
+  const removeComment = useMutation(api.comments.remove);
 
   const [title, setTitle] = useState(card.title);
   const [description, setDescription] = useState(card.description ?? "");
@@ -47,6 +73,38 @@ export function CardModal({ card, boardId, open, onOpenChange }: CardModalProps)
   const [labelsOpen, setLabelsOpen] = useState(false);
   const [assigneesOpen, setAssigneesOpen] = useState(false);
   const [dateOpen, setDateOpen] = useState(false);
+  const [colorOpen, setColorOpen] = useState(false);
+  const [newComment, setNewComment] = useState("");
+  const [isSubmittingComment, setIsSubmittingComment] = useState(false);
+  const commentsEndRef = useRef<HTMLDivElement>(null);
+
+  // Scroll to bottom when new comments arrive
+  useEffect(() => {
+    if (open && comments?.length) {
+      commentsEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    }
+  }, [comments?.length, open]);
+
+  const handleAddComment = async () => {
+    if (!newComment.trim() || isSubmittingComment) return;
+    setIsSubmittingComment(true);
+    try {
+      await addComment({ cardId: card._id, content: newComment.trim() });
+      setNewComment("");
+    } catch {
+      toast.error("Failed to add comment");
+    } finally {
+      setIsSubmittingComment(false);
+    }
+  };
+
+  const handleDeleteComment = async (commentId: Id<"comments">) => {
+    try {
+      await removeComment({ id: commentId });
+    } catch {
+      toast.error("Failed to delete comment");
+    }
+  };
 
   const handleSave = async () => {
     if (!title.trim()) return;
@@ -103,6 +161,18 @@ export function CardModal({ card, boardId, open, onOpenChange }: CardModalProps)
       setDateOpen(false);
     } catch {
       toast.error("Failed to update due date");
+    }
+  };
+
+  const handleSetColor = async (color: string | null) => {
+    try {
+      await updateCard({
+        id: card._id,
+        color,
+      });
+      setColorOpen(false);
+    } catch {
+      toast.error("Failed to update color");
     }
   };
 
@@ -187,6 +257,84 @@ export function CardModal({ card, boardId, open, onOpenChange }: CardModalProps)
                   </div>
                 </div>
               )}
+
+              {/* Comments Section */}
+              <div className="space-y-3">
+                <div className="flex items-center gap-2">
+                  <MessageSquare className="h-4 w-4" />
+                  <Label>Comments</Label>
+                  {comments && comments.length > 0 && (
+                    <span className="text-muted-foreground text-xs">({comments.length})</span>
+                  )}
+                </div>
+
+                {/* Comments List */}
+                {comments && comments.length > 0 && (
+                  <ScrollArea className="max-h-48">
+                    <div className="space-y-3 pr-4">
+                      {comments.map((comment) => (
+                        <div key={comment._id} className="group flex gap-3">
+                          <UserAvatar
+                            userId={comment.user._id}
+                            name={comment.user.name}
+                            email={comment.user.email}
+                            image={comment.user.image}
+                            className="h-7 w-7 shrink-0"
+                            fallbackClassName="text-xs"
+                          />
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-center gap-2">
+                              <span className="text-sm font-medium">
+                                {comment.user.name ?? comment.user.email}
+                              </span>
+                              <span className="text-muted-foreground text-xs">
+                                {formatDistanceToNow(new Date(comment.createdAt), {
+                                  addSuffix: true,
+                                })}
+                              </span>
+                              {comment.userId === currentUser?._id && (
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="text-muted-foreground hover:text-destructive ml-auto h-6 w-6 opacity-0 transition-opacity group-hover:opacity-100"
+                                  onClick={() => handleDeleteComment(comment._id)}
+                                >
+                                  <X className="h-3 w-3" />
+                                </Button>
+                              )}
+                            </div>
+                            <p className="text-sm">{comment.content}</p>
+                          </div>
+                        </div>
+                      ))}
+                      <div ref={commentsEndRef} />
+                    </div>
+                  </ScrollArea>
+                )}
+
+                {/* Add Comment */}
+                <div className="flex gap-2">
+                  <Input
+                    placeholder="Write a comment..."
+                    value={newComment}
+                    onChange={(e) => setNewComment(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" && !e.shiftKey) {
+                        e.preventDefault();
+                        handleAddComment();
+                      }
+                    }}
+                    disabled={isSubmittingComment}
+                  />
+                  <Button
+                    size="icon"
+                    onClick={handleAddComment}
+                    disabled={!newComment.trim() || isSubmittingComment}
+                  >
+                    <Send className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
             </div>
 
             {/* Sidebar Actions */}
@@ -283,6 +431,48 @@ export function CardModal({ card, boardId, open, onOpenChange }: CardModalProps)
                       </Button>
                     </div>
                   )}
+                </PopoverContent>
+              </Popover>
+
+              {/* Color */}
+              <Popover open={colorOpen} onOpenChange={setColorOpen}>
+                <PopoverTrigger asChild>
+                  <Button variant="secondary" size="sm" className="w-full justify-start">
+                    <Palette className="mr-2 h-4 w-4" />
+                    {card.color ? (
+                      <div className="flex items-center gap-2">
+                        <div className="h-4 w-4 rounded" style={{ backgroundColor: card.color }} />
+                        <span>Color</span>
+                      </div>
+                    ) : (
+                      "Color"
+                    )}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-48" align="start">
+                  <div className="space-y-2">
+                    <p className="text-sm font-medium">Card Color</p>
+                    <div className="grid grid-cols-4 gap-2">
+                      {CARD_COLORS.map((c) => (
+                        <button
+                          key={c.name}
+                          className="hover:ring-primary flex h-8 w-8 items-center justify-center rounded transition-all hover:ring-2"
+                          style={{
+                            backgroundColor: c.color,
+                            border: c.value === null ? "2px dashed currentColor" : "none",
+                          }}
+                          onClick={() => handleSetColor(c.value)}
+                        >
+                          {card.color === c.value && c.value !== null && (
+                            <Check className="h-4 w-4 text-white" />
+                          )}
+                          {card.color === undefined && c.value === null && (
+                            <Check className="h-4 w-4" />
+                          )}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
                 </PopoverContent>
               </Popover>
 

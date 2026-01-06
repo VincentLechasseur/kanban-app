@@ -12,6 +12,7 @@ export default defineSchema({
     ownerId: v.id("users"),
     memberIds: v.array(v.id("users")),
     isPublic: v.optional(v.boolean()),
+    order: v.optional(v.number()),
     createdAt: v.number(),
   })
     .index("by_owner", ["ownerId"])
@@ -29,6 +30,7 @@ export default defineSchema({
     boardId: v.id("boards"),
     title: v.string(),
     description: v.optional(v.string()),
+    color: v.optional(v.string()),
     order: v.number(),
     assigneeIds: v.array(v.id("users")),
     labelIds: v.array(v.id("labels")),
@@ -63,6 +65,13 @@ export default defineSchema({
     content: v.string(),
     createdAt: v.number(),
   }).index("by_board", ["boardId", "createdAt"]),
+
+  comments: defineTable({
+    cardId: v.id("cards"),
+    userId: v.id("users"),
+    content: v.string(),
+    createdAt: v.number(),
+  }).index("by_card", ["cardId", "createdAt"]),
 
   chatReadStatus: defineTable({
     boardId: v.id("boards"),

@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Outlet, useNavigate } from "react-router-dom";
-import { useMutation } from "convex/react";
+import { useMutation, useQuery } from "convex/react";
 import { api } from "../../../convex/_generated/api";
 import { Header } from "./Header";
 import { Sidebar } from "./Sidebar";
@@ -16,16 +16,29 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { EmojiPicker } from "@/components/EmojiPicker";
+import { KeyboardShortcutsDialog, useKeyboardShortcuts } from "@/components/KeyboardShortcuts";
 import { toast } from "sonner";
 
 export function Layout() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [createOpen, setCreateOpen] = useState(false);
+  const [helpOpen, setHelpOpen] = useState(false);
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
+  const [icon, setIcon] = useState("");
   const [isCreating, setIsCreating] = useState(false);
   const createBoard = useMutation(api.boards.create);
+  const boards = useQuery(api.boards.list);
   const navigate = useNavigate();
+
+  // Keyboard shortcuts
+  useKeyboardShortcuts({
+    onNewBoard: () => setCreateOpen(true),
+    onShowHelp: () => setHelpOpen(true),
+    onNavigate: navigate,
+    boards,
+  });
 
   const handleCreate = async () => {
     if (!name.trim()) return;
@@ -34,11 +47,13 @@ export function Layout() {
       const boardId = await createBoard({
         name: name.trim(),
         description: description.trim() || undefined,
+        icon: icon || undefined,
       });
       toast.success("Board created successfully");
       setCreateOpen(false);
       setName("");
       setDescription("");
+      setIcon("");
       navigate(`/board/${boardId}`);
     } catch {
       toast.error("Failed to create board");
@@ -87,13 +102,17 @@ export function Layout() {
           <div className="space-y-4 py-4">
             <div className="space-y-2">
               <Label htmlFor="board-name">Board name</Label>
-              <Input
-                id="board-name"
-                placeholder="e.g., Product Roadmap"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && handleCreate()}
-              />
+              <div className="flex gap-2">
+                <EmojiPicker value={icon} onChange={setIcon} />
+                <Input
+                  id="board-name"
+                  placeholder="e.g., Product Roadmap"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && handleCreate()}
+                  className="flex-1"
+                />
+              </div>
             </div>
             <div className="space-y-2">
               <Label htmlFor="board-description">Description (optional)</Label>
@@ -115,6 +134,9 @@ export function Layout() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Keyboard Shortcuts Help */}
+      <KeyboardShortcutsDialog open={helpOpen} onOpenChange={setHelpOpen} />
     </div>
   );
 }

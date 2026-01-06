@@ -91,6 +91,7 @@ export const update = mutation({
     title: v.optional(v.string()),
     description: v.optional(v.string()),
     dueDate: v.optional(v.union(v.number(), v.null())),
+    color: v.optional(v.union(v.string(), v.null())),
   },
   handler: async (ctx, args) => {
     const userId = await getAuthUserId(ctx);
@@ -110,11 +111,15 @@ export const update = mutation({
       title: string;
       description: string;
       dueDate: number | undefined;
+      color: string | undefined;
     }> = {};
     if (args.title !== undefined) updates.title = args.title;
     if (args.description !== undefined) updates.description = args.description;
     if (args.dueDate !== undefined) {
       updates.dueDate = args.dueDate === null ? undefined : args.dueDate;
+    }
+    if (args.color !== undefined) {
+      updates.color = args.color === null ? undefined : args.color;
     }
 
     await ctx.db.patch(args.id, updates);

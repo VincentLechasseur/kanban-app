@@ -18,7 +18,18 @@ export const list = query({
       (b) => b.memberIds.includes(userId) && b.ownerId !== userId
     );
 
-    return [...ownedBoards, ...memberBoards].sort((a, b) => b.createdAt - a.createdAt);
+    // Sort by order (if set), then by createdAt descending
+    return [...ownedBoards, ...memberBoards].sort((a, b) => {
+      // If both have order, sort by order
+      if (a.order !== undefined && b.order !== undefined) {
+        return a.order - b.order;
+      }
+      // Items with order come first
+      if (a.order !== undefined) return -1;
+      if (b.order !== undefined) return 1;
+      // Otherwise sort by createdAt descending
+      return b.createdAt - a.createdAt;
+    });
   },
 });
 
@@ -286,5 +297,28 @@ export const updateVisibility = mutation({
     if (board.ownerId !== userId) throw new Error("Not authorized");
 
     await ctx.db.patch(args.id, { isPublic: args.isPublic });
+  },
+});
+
+export const reorder = mutation({
+  args: {
+    boardIds: v.array(v.id("boards")),
+  },
+  handler: async (ctx, args) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) throw new Error("Not authenticated");
+
+    // Update order for each board
+    for (let i = 0; i < args.boardIds.length; i++) {
+      const board = await ctx.db.get(args.boardIds[i]);
+      if (!board) continue;
+
+      // Only allow reordering of boards user owns or is a member of
+      if (board.ownerId !== userId && !board.memberIds.includes(userId)) {
+        continue;
+      }
+
+      await ctx.db.patch(args.boardIds[i], { order: i });
+    }
   },
 });
