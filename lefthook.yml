@@ -13,6 +13,7 @@ pre-commit:
       run: bun run typecheck
 
 pre-push:
+  parallel: true
   jobs:
     - name: build
       run: bun run build
