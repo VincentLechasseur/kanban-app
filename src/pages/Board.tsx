@@ -5,6 +5,7 @@ import { api } from "../../convex/_generated/api";
 import type { Id } from "../../convex/_generated/dataModel";
 import { Board } from "@/components/board/Board";
 import { MembersModal } from "@/components/board/MembersModal";
+import { BoardChat } from "@/components/board/BoardChat";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -42,7 +43,7 @@ import {
 } from "@/components/ui/tooltip";
 import { UserAvatar } from "@/components/UserAvatar";
 import { Badge } from "@/components/ui/badge";
-import { Globe, Lock, MoreHorizontal, Pencil, Trash2, Users } from "lucide-react";
+import { Globe, Lock, MessageCircle, MoreHorizontal, Pencil, Trash2, Users } from "lucide-react";
 import { toast } from "sonner";
 
 export function BoardPage() {
@@ -68,6 +69,7 @@ export function BoardPage() {
   const [editOpen, setEditOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [membersOpen, setMembersOpen] = useState(false);
+  const [chatOpen, setChatOpen] = useState(false);
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [isUpdating, setIsUpdating] = useState(false);
@@ -223,6 +225,15 @@ export function BoardPage() {
             </div>
           </TooltipProvider>
 
+          {/* Chat Button */}
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={() => setChatOpen(true)}
+          >
+            <MessageCircle className="h-5 w-5" />
+          </Button>
+
           {/* Menu */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -275,6 +286,13 @@ export function BoardPage() {
         ownerId={board.ownerId}
         open={membersOpen}
         onOpenChange={setMembersOpen}
+      />
+
+      {/* Team Chat */}
+      <BoardChat
+        boardId={board._id}
+        open={chatOpen}
+        onOpenChange={setChatOpen}
       />
 
       {/* Edit Dialog */}

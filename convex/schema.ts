@@ -59,4 +59,11 @@ export default defineSchema({
     .index("by_board", ["boardId"])
     .index("by_user", ["userId"])
     .index("by_board_status", ["boardId", "status"]),
+
+  messages: defineTable({
+    boardId: v.id("boards"),
+    userId: v.id("users"),
+    content: v.string(),
+    createdAt: v.number(),
+  }).index("by_board", ["boardId", "createdAt"]),
 });
