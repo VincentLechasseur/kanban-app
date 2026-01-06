@@ -5,6 +5,7 @@ import { LoginPage } from "@/pages/Login";
 import { HomePage } from "@/pages/Home";
 import { BoardPage } from "@/pages/Board";
 import { ProfilePage } from "@/pages/Profile";
+import { MarketplacePage } from "@/pages/Marketplace";
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { isLoading, isAuthenticated } = useConvexAuth();
@@ -39,6 +40,7 @@ function App() {
         <Route index element={<HomePage />} />
         <Route path="board/:boardId" element={<BoardPage />} />
         <Route path="profile" element={<ProfilePage />} />
+        <Route path="marketplace" element={<MarketplacePage />} />
       </Route>
     </Routes>
   );

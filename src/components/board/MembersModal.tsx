@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "convex/react";
+import { formatDistanceToNow } from "date-fns";
 import { api } from "../../../convex/_generated/api";
 import type { Id } from "../../../convex/_generated/dataModel";
 import { UserAvatar } from "@/components/UserAvatar";
@@ -14,7 +15,15 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { Crown, Loader2, UserMinus, UserPlus } from "lucide-react";
+import {
+  Check,
+  Crown,
+  Loader2,
+  UserMinus,
+  UserPlus,
+  X,
+  Clock,
+} from "lucide-react";
 import { toast } from "sonner";
 
 interface MembersModalProps {
@@ -32,12 +41,16 @@ export function MembersModal({
 }: MembersModalProps) {
   const currentUser = useQuery(api.users.currentUser);
   const members = useQuery(api.boards.getMembers, { boardId });
+  const joinRequests = useQuery(api.joinRequests.listForBoard, { boardId });
   const addMember = useMutation(api.boards.addMember);
   const removeMember = useMutation(api.boards.removeMember);
+  const acceptRequest = useMutation(api.joinRequests.accept);
+  const rejectRequest = useMutation(api.joinRequests.reject);
 
   const [email, setEmail] = useState("");
   const [isInviting, setIsInviting] = useState(false);
   const [removingId, setRemovingId] = useState<Id<"users"> | null>(null);
+  const [processingRequestId, setProcessingRequestId] = useState<Id<"joinRequests"> | null>(null);
 
   const isOwner = currentUser?._id === ownerId;
 
@@ -71,6 +84,30 @@ export function MembersModal({
     }
   };
 
+  const handleAcceptRequest = async (requestId: Id<"joinRequests">) => {
+    setProcessingRequestId(requestId);
+    try {
+      await acceptRequest({ requestId });
+      toast.success("Request accepted");
+    } catch {
+      toast.error("Failed to accept request");
+    } finally {
+      setProcessingRequestId(null);
+    }
+  };
+
+  const handleRejectRequest = async (requestId: Id<"joinRequests">) => {
+    setProcessingRequestId(requestId);
+    try {
+      await rejectRequest({ requestId });
+      toast.success("Request rejected");
+    } catch {
+      toast.error("Failed to reject request");
+    } finally {
+      setProcessingRequestId(null);
+    }
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md">
@@ -80,6 +117,76 @@ export function MembersModal({
             Manage who has access to this board
           </DialogDescription>
         </DialogHeader>
+
+        {/* Pending Requests Section - Only for owner */}
+        {isOwner && joinRequests && joinRequests.length > 0 && (
+          <>
+            <div className="space-y-2">
+              <div className="flex items-center gap-2">
+                <Clock className="h-4 w-4 text-muted-foreground" />
+                <p className="text-sm font-medium text-muted-foreground">
+                  {joinRequests.length} pending request{joinRequests.length !== 1 ? "s" : ""}
+                </p>
+              </div>
+              <div className="max-h-48 space-y-2 overflow-y-auto">
+                {joinRequests.map((request) => (
+                  <div
+                    key={request._id}
+                    className="flex items-center justify-between rounded-lg border border-dashed border-primary/50 bg-primary/5 p-3"
+                  >
+                    <div className="flex items-center gap-3">
+                      <UserAvatar
+                        userId={request.user._id}
+                        name={request.user.name}
+                        email={request.user.email}
+                        image={request.user.image}
+                        className="h-9 w-9"
+                      />
+                      <div>
+                        <span className="text-sm font-medium">
+                          {request.user.name ?? request.user.email}
+                        </span>
+                        <p className="text-xs text-muted-foreground">
+                          {formatDistanceToNow(request.createdAt, { addSuffix: true })}
+                        </p>
+                        {request.message && (
+                          <p className="mt-1 text-xs italic text-muted-foreground">
+                            "{request.message}"
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                    <div className="flex gap-1">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 text-green-600 hover:bg-green-100 hover:text-green-700"
+                        onClick={() => handleAcceptRequest(request._id)}
+                        disabled={processingRequestId === request._id}
+                      >
+                        {processingRequestId === request._id ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          <Check className="h-4 w-4" />
+                        )}
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 text-red-600 hover:bg-red-100 hover:text-red-700"
+                        onClick={() => handleRejectRequest(request._id)}
+                        disabled={processingRequestId === request._id}
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <Separator />
+          </>
+        )}
 
         {/* Invite Form */}
         {isOwner && (

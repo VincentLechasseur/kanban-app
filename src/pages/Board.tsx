@@ -41,7 +41,8 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { UserAvatar } from "@/components/UserAvatar";
-import { MoreHorizontal, Pencil, Trash2, Users } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Globe, Lock, MoreHorizontal, Pencil, Trash2, Users } from "lucide-react";
 import { toast } from "sonner";
 
 export function BoardPage() {
@@ -55,8 +56,14 @@ export function BoardPage() {
     api.boards.getMembers,
     boardId ? { boardId: boardId as Id<"boards"> } : "skip"
   );
+  const currentUser = useQuery(api.users.currentUser);
+  const pendingRequestCount = useQuery(
+    api.joinRequests.getPendingCount,
+    boardId ? { boardId: boardId as Id<"boards"> } : "skip"
+  );
   const updateBoard = useMutation(api.boards.update);
   const deleteBoard = useMutation(api.boards.remove);
+  const updateVisibility = useMutation(api.boards.updateVisibility);
 
   const [editOpen, setEditOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
@@ -132,11 +139,43 @@ export function BoardPage() {
     }
   };
 
+  const handleToggleVisibility = async () => {
+    try {
+      await updateVisibility({
+        id: board._id,
+        isPublic: !board.isPublic,
+      });
+      toast.success(board.isPublic ? "Board is now private" : "Board is now public");
+    } catch {
+      toast.error("Failed to update visibility");
+    }
+  };
+
+  const isOwner = currentUser?._id === board.ownerId;
+
   return (
     <div className="flex h-full flex-col">
       <div className="flex items-center justify-between border-b bg-background px-6 py-4">
         <div>
-          <h1 className="text-xl font-semibold">{board.name}</h1>
+          <div className="flex items-center gap-2">
+            <h1 className="text-xl font-semibold">{board.name}</h1>
+            {board.isPublic ? (
+              <Badge variant="secondary" className="gap-1">
+                <Globe className="h-3 w-3" />
+                Public
+              </Badge>
+            ) : (
+              <Badge variant="outline" className="gap-1">
+                <Lock className="h-3 w-3" />
+                Private
+              </Badge>
+            )}
+            {isOwner && pendingRequestCount !== undefined && pendingRequestCount > 0 && (
+              <Badge variant="default" className="gap-1">
+                {pendingRequestCount} request{pendingRequestCount !== 1 ? "s" : ""}
+              </Badge>
+            )}
+          </div>
           {board.description && (
             <p className="text-sm text-muted-foreground">{board.description}</p>
           )}
@@ -200,6 +239,21 @@ export function BoardPage() {
                 <Users className="mr-2 h-4 w-4" />
                 Manage members
               </DropdownMenuItem>
+              {isOwner && (
+                <DropdownMenuItem onClick={handleToggleVisibility}>
+                  {board.isPublic ? (
+                    <>
+                      <Lock className="mr-2 h-4 w-4" />
+                      Make private
+                    </>
+                  ) : (
+                    <>
+                      <Globe className="mr-2 h-4 w-4" />
+                      Make public
+                    </>
+                  )}
+                </DropdownMenuItem>
+              )}
               <DropdownMenuSeparator />
               <DropdownMenuItem
                 className="text-destructive"

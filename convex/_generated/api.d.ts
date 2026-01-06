@@ -13,6 +13,7 @@ import type * as boards from "../boards.js";
 import type * as cards from "../cards.js";
 import type * as columns from "../columns.js";
 import type * as http from "../http.js";
+import type * as joinRequests from "../joinRequests.js";
 import type * as labels from "../labels.js";
 import type * as users from "../users.js";
 
@@ -28,6 +29,7 @@ declare const fullApi: ApiFromModules<{
   cards: typeof cards;
   columns: typeof columns;
   http: typeof http;
+  joinRequests: typeof joinRequests;
   labels: typeof labels;
   users: typeof users;
 }>;

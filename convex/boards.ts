@@ -228,3 +228,63 @@ export const getMembers = query({
     return members.filter((m) => m !== null);
   },
 });
+
+export const listPublic = query({
+  args: {},
+  handler: async (ctx) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) return [];
+
+    const publicBoards = await ctx.db
+      .query("boards")
+      .withIndex("by_public", (q) => q.eq("isPublic", true))
+      .collect();
+
+    // Filter out boards user already owns or is a member of
+    const filteredBoards = publicBoards.filter(
+      (b) => b.ownerId !== userId && !b.memberIds.includes(userId)
+    );
+
+    // Get owner info for each board
+    const boardsWithOwners = await Promise.all(
+      filteredBoards.map(async (board) => {
+        const owner = await ctx.db.get(board.ownerId);
+        if (!owner) return null;
+
+        // Resolve owner profile image
+        let ownerImage: string | undefined = owner.image;
+        if (ownerImage?.startsWith("storage:")) {
+          const storageId = ownerImage.replace("storage:", "") as any;
+          ownerImage = (await ctx.storage.getUrl(storageId)) ?? undefined;
+        }
+
+        return {
+          ...board,
+          owner: { ...owner, image: ownerImage },
+          memberCount: board.memberIds.length + 1,
+        };
+      })
+    );
+
+    return boardsWithOwners
+      .filter((b) => b !== null)
+      .sort((a, b) => b.createdAt - a.createdAt);
+  },
+});
+
+export const updateVisibility = mutation({
+  args: {
+    id: v.id("boards"),
+    isPublic: v.boolean(),
+  },
+  handler: async (ctx, args) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) throw new Error("Not authenticated");
+
+    const board = await ctx.db.get(args.id);
+    if (!board) throw new Error("Board not found");
+    if (board.ownerId !== userId) throw new Error("Not authorized");
+
+    await ctx.db.patch(args.id, { isPublic: args.isPublic });
+  },
+});

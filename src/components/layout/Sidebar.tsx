@@ -1,11 +1,11 @@
 import { useQuery } from "convex/react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams, useLocation } from "react-router-dom";
 import { api } from "../../../convex/_generated/api";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
-import { Home, Kanban, Plus } from "lucide-react";
+import { Globe, Home, Kanban, Plus } from "lucide-react";
 
 interface SidebarProps {
   onCreateBoard: () => void;
@@ -14,21 +14,36 @@ interface SidebarProps {
 export function Sidebar({ onCreateBoard }: SidebarProps) {
   const boards = useQuery(api.boards.list);
   const navigate = useNavigate();
+  const location = useLocation();
   const { boardId } = useParams<{ boardId: string }>();
+
+  const isHome = location.pathname === "/";
+  const isMarketplace = location.pathname === "/marketplace";
 
   return (
     <div className="flex h-full flex-col">
-      <div className="p-4">
+      <div className="space-y-1 p-4">
         <Button
           variant="ghost"
           className={cn(
             "w-full justify-start",
-            !boardId && "bg-accent text-accent-foreground"
+            isHome && "bg-accent text-accent-foreground"
           )}
           onClick={() => navigate("/")}
         >
           <Home className="mr-2 h-4 w-4" />
           Home
+        </Button>
+        <Button
+          variant="ghost"
+          className={cn(
+            "w-full justify-start",
+            isMarketplace && "bg-accent text-accent-foreground"
+          )}
+          onClick={() => navigate("/marketplace")}
+        >
+          <Globe className="mr-2 h-4 w-4" />
+          Marketplace
         </Button>
       </div>
 
