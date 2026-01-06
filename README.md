@@ -195,6 +195,103 @@ bun run knip
 - **joinRequests** - Requests to join public boards
 - **messages** - Team chat messages per board
 - **chatReadStatus** - Tracks unread messages per user/board
+- **comments** - Card comments
+
+## Convex Best Practices
+
+### Deployment
+
+Convex backend and frontend are deployed separately:
+
+| Component | Deployment |
+|-----------|------------|
+| Frontend (Vite) | Vercel auto-deploys on push |
+| Backend (Convex) | Requires `bunx convex deploy` |
+
+**Important:** Schema changes (new tables, fields, indexes) require deploying Convex to production. If you only push to Vercel, your frontend will try to use tables/functions that don't exist in production yet.
+
+### Auto-deploy on Push
+
+This project includes a pre-push hook that automatically deploys Convex:
+
+```yaml
+# lefthook.yml
+pre-push:
+  jobs:
+    - name: convex-deploy
+      run: bunx convex deploy --yes
+```
+
+This ensures your Convex backend is always in sync with your frontend.
+
+### Manual Deployment
+
+```bash
+bunx convex deploy         # Deploy to production (interactive)
+bunx convex deploy --yes   # Deploy without confirmation
+```
+
+### Schema Migrations
+
+Convex handles schema changes gracefully:
+
+| Change Type | Migration Required | Notes |
+|-------------|-------------------|-------|
+| Add new table | No | Table is created empty |
+| Add optional field | No | Existing docs have `undefined` |
+| Add required field | No* | Must provide default or backfill |
+| Add index | No | Index builds automatically |
+| Remove field | No | Field is ignored |
+| Remove table | Manual | Must delete data first |
+
+*For required fields on existing data, either:
+1. Make the field optional: `v.optional(v.string())`
+2. Run a migration to backfill existing documents
+
+### Environment Variables
+
+Convex uses two sets of environment variables:
+
+| Location | Purpose | Example |
+|----------|---------|---------|
+| `.env.local` | Local dev config | `CONVEX_DEPLOYMENT=dev:...` |
+| Convex Dashboard | Production secrets | `AUTH_GITHUB_SECRET=...` |
+
+Never commit secrets to git. Add them via:
+```bash
+bunx convex env set AUTH_GITHUB_SECRET "your-secret"
+```
+
+### Debugging
+
+```bash
+bunx convex logs                    # Stream dev logs
+bunx convex logs --prod             # Stream production logs
+bunx convex logs --prod --success   # Include successful calls
+bunx convex dashboard               # Open web dashboard
+```
+
+### Local Development
+
+For faster iteration, use a local Convex backend:
+
+```bash
+bunx convex dev --once              # Deploy once and exit
+bunx convex dev                     # Watch mode (auto-redeploy)
+```
+
+## Keyboard Shortcuts
+
+| Keys | Action |
+|------|--------|
+| `?` | Show keyboard shortcuts help |
+| `B` | Create new board |
+| `N` | Create new card (on board page) |
+| `/` | Focus search (on board page) |
+| `G` then `H` | Go to Home |
+| `G` then `M` | Go to Marketplace |
+| `G` then `P` | Go to Profile |
+| `1-9` | Open board by position |
 
 ## License
 
