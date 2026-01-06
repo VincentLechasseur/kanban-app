@@ -65,16 +65,17 @@ export function BoardChat({ boardId, open, onOpenChange }: BoardChatProps) {
     setSelectedIndex(0);
   }, [mentionSearch, mentionType]);
 
-  // Filter suggestions based on search
+  // Filter suggestions based on search (exclude current user from mentions)
   const userSuggestions = useMemo(() => {
-    if (mentionType !== "user" || !members) return [];
+    if (mentionType !== "user" || !members || !currentUser) return [];
     const search = mentionSearch.toLowerCase();
     return members.filter(
       (m) =>
-        m.name?.toLowerCase().includes(search) ||
-        m.email?.toLowerCase().includes(search)
+        m._id !== currentUser._id &&
+        (m.name?.toLowerCase().includes(search) ||
+          m.email?.toLowerCase().includes(search))
     );
-  }, [members, mentionSearch, mentionType]);
+  }, [members, mentionSearch, mentionType, currentUser]);
 
   const cardSuggestions = useMemo(() => {
     if (mentionType !== "card" || !cards) return [];
@@ -453,11 +454,11 @@ export function BoardChat({ boardId, open, onOpenChange }: BoardChatProps) {
                     <div className="space-y-2 text-sm">
                       <p className="font-semibold">Shortcuts</p>
                       <div className="flex items-center gap-2">
-                        <kbd className="rounded border border-border bg-background px-1.5 py-0.5 text-xs font-mono">@</kbd>
+                        <kbd className="rounded border border-input bg-secondary px-1.5 py-0.5 text-xs font-mono text-secondary-foreground">@</kbd>
                         <span>Mention a team member</span>
                       </div>
                       <div className="flex items-center gap-2">
-                        <kbd className="rounded border border-border bg-background px-1.5 py-0.5 text-xs font-mono">!</kbd>
+                        <kbd className="rounded border border-input bg-secondary px-1.5 py-0.5 text-xs font-mono text-secondary-foreground">!</kbd>
                         <span>Reference a card (clickable)</span>
                       </div>
                     </div>
