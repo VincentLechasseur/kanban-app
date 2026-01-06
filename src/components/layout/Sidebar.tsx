@@ -89,13 +89,13 @@ export function Sidebar({ onCreateBoard }: SidebarProps) {
                     <Button
                       variant="ghost"
                       className={cn(
-                        "w-full justify-start",
+                        "w-full justify-start overflow-hidden",
                         boardId === board._id && "bg-accent text-accent-foreground"
                       )}
                       onClick={() => navigate(`/board/${board._id}`)}
                     >
                       <Kanban className="mr-2 h-4 w-4 shrink-0" />
-                      <span className="truncate">{board.name}</span>
+                      <span className="truncate text-left">{board.name}</span>
                     </Button>
                   </TooltipTrigger>
                   <TooltipContent side="right">
