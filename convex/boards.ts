@@ -18,9 +18,7 @@ export const list = query({
       (b) => b.memberIds.includes(userId) && b.ownerId !== userId
     );
 
-    return [...ownedBoards, ...memberBoards].sort(
-      (a, b) => b.createdAt - a.createdAt
-    );
+    return [...ownedBoards, ...memberBoards].sort((a, b) => b.createdAt - a.createdAt);
   },
 });
 
@@ -266,9 +264,7 @@ export const listPublic = query({
       })
     );
 
-    return boardsWithOwners
-      .filter((b) => b !== null)
-      .sort((a, b) => b.createdAt - a.createdAt);
+    return boardsWithOwners.filter((b) => b !== null).sort((a, b) => b.createdAt - a.createdAt);
   },
 });
 

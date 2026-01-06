@@ -15,15 +15,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import {
-  Check,
-  Crown,
-  Loader2,
-  UserMinus,
-  UserPlus,
-  X,
-  Clock,
-} from "lucide-react";
+import { Check, Crown, Loader2, UserMinus, UserPlus, X, Clock } from "lucide-react";
 import { toast } from "sonner";
 
 interface MembersModalProps {
@@ -33,12 +25,7 @@ interface MembersModalProps {
   onOpenChange: (open: boolean) => void;
 }
 
-export function MembersModal({
-  boardId,
-  ownerId,
-  open,
-  onOpenChange,
-}: MembersModalProps) {
+export function MembersModal({ boardId, ownerId, open, onOpenChange }: MembersModalProps) {
   const currentUser = useQuery(api.users.currentUser);
   const members = useQuery(api.boards.getMembers, { boardId });
   const joinRequests = useQuery(api.joinRequests.listForBoard, { boardId });
@@ -64,9 +51,7 @@ export function MembersModal({
       toast.success("Member invited successfully");
       setEmail("");
     } catch (error) {
-      toast.error(
-        error instanceof Error ? error.message : "Failed to invite member"
-      );
+      toast.error(error instanceof Error ? error.message : "Failed to invite member");
     } finally {
       setIsInviting(false);
     }
@@ -113,9 +98,7 @@ export function MembersModal({
       <DialogContent className="max-w-md">
         <DialogHeader>
           <DialogTitle>Board Members</DialogTitle>
-          <DialogDescription>
-            Manage who has access to this board
-          </DialogDescription>
+          <DialogDescription>Manage who has access to this board</DialogDescription>
         </DialogHeader>
 
         {/* Pending Requests Section - Only for owner */}
@@ -123,8 +106,8 @@ export function MembersModal({
           <>
             <div className="space-y-2">
               <div className="flex items-center gap-2">
-                <Clock className="h-4 w-4 text-muted-foreground" />
-                <p className="text-sm font-medium text-muted-foreground">
+                <Clock className="text-muted-foreground h-4 w-4" />
+                <p className="text-muted-foreground text-sm font-medium">
                   {joinRequests.length} pending request{joinRequests.length !== 1 ? "s" : ""}
                 </p>
               </div>
@@ -132,7 +115,7 @@ export function MembersModal({
                 {joinRequests.map((request) => (
                   <div
                     key={request._id}
-                    className="flex items-center justify-between rounded-lg border border-dashed border-primary/50 bg-primary/5 p-3"
+                    className="border-primary/50 bg-primary/5 flex items-center justify-between rounded-lg border border-dashed p-3"
                   >
                     <div className="flex items-center gap-3">
                       <UserAvatar
@@ -146,11 +129,11 @@ export function MembersModal({
                         <span className="text-sm font-medium">
                           {request.user.name ?? request.user.email}
                         </span>
-                        <p className="text-xs text-muted-foreground">
+                        <p className="text-muted-foreground text-xs">
                           {formatDistanceToNow(request.createdAt, { addSuffix: true })}
                         </p>
                         {request.message && (
-                          <p className="mt-1 text-xs italic text-muted-foreground">
+                          <p className="text-muted-foreground mt-1 text-xs italic">
                             "{request.message}"
                           </p>
                         )}
@@ -213,7 +196,7 @@ export function MembersModal({
 
         {/* Members List */}
         <div className="space-y-2">
-          <p className="text-sm font-medium text-muted-foreground">
+          <p className="text-muted-foreground text-sm font-medium">
             {members?.length ?? 0} member{members?.length !== 1 ? "s" : ""}
           </p>
           <div className="max-h-64 space-y-2 overflow-y-auto">
@@ -238,9 +221,7 @@ export function MembersModal({
                       <div className="flex items-center gap-2">
                         <span className="text-sm font-medium">
                           {member.name ?? member.email}
-                          {isCurrentUser && (
-                            <span className="text-muted-foreground"> (you)</span>
-                          )}
+                          {isCurrentUser && <span className="text-muted-foreground"> (you)</span>}
                         </span>
                         {isMemberOwner && (
                           <Badge variant="secondary" className="gap-1">
@@ -249,9 +230,7 @@ export function MembersModal({
                           </Badge>
                         )}
                       </div>
-                      <p className="text-xs text-muted-foreground">
-                        {member.email}
-                      </p>
+                      <p className="text-muted-foreground text-xs">{member.email}</p>
                     </div>
                   </div>
 
@@ -260,7 +239,7 @@ export function MembersModal({
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                      className="text-muted-foreground hover:text-destructive h-8 w-8"
                       onClick={() => handleRemove(member._id)}
                       disabled={removingId === member._id}
                     >
@@ -278,7 +257,7 @@ export function MembersModal({
         </div>
 
         {!isOwner && (
-          <p className="text-center text-xs text-muted-foreground">
+          <p className="text-muted-foreground text-center text-xs">
             Only the board owner can invite or remove members
           </p>
         )}

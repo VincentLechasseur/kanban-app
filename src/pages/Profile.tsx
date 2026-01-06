@@ -3,13 +3,7 @@ import { useQuery, useMutation } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { UserAvatar } from "@/components/UserAvatar";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
@@ -132,11 +126,7 @@ export function ProfilePage() {
 
   return (
     <div className="mx-auto max-w-2xl p-6">
-      <Button
-        variant="ghost"
-        className="mb-6"
-        onClick={() => navigate(-1)}
-      >
+      <Button variant="ghost" className="mb-6" onClick={() => navigate(-1)}>
         <ArrowLeft className="mr-2 h-4 w-4" />
         Back
       </Button>
@@ -144,9 +134,7 @@ export function ProfilePage() {
       <Card>
         <CardHeader>
           <CardTitle>Profile Settings</CardTitle>
-          <CardDescription>
-            Manage your account settings and profile picture
-          </CardDescription>
+          <CardDescription>Manage your account settings and profile picture</CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
           {/* Profile Picture */}
@@ -194,9 +182,7 @@ export function ProfilePage() {
                     Remove
                   </Button>
                 )}
-                <p className="text-xs text-muted-foreground">
-                  JPG, PNG or GIF. Max 5MB.
-                </p>
+                <p className="text-muted-foreground text-xs">JPG, PNG or GIF. Max 5MB.</p>
               </div>
             </div>
           </div>
@@ -218,11 +204,7 @@ export function ProfilePage() {
                 onClick={handleUpdateName}
                 disabled={isUpdating || !name.trim() || name === user.name}
               >
-                {isUpdating ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  "Save"
-                )}
+                {isUpdating ? <Loader2 className="h-4 w-4 animate-spin" /> : "Save"}
               </Button>
             </div>
           </div>
@@ -232,15 +214,8 @@ export function ProfilePage() {
           {/* Email (read-only) */}
           <div className="space-y-2">
             <Label htmlFor="email">Email</Label>
-            <Input
-              id="email"
-              value={user.email ?? ""}
-              disabled
-              className="max-w-xs bg-muted"
-            />
-            <p className="text-xs text-muted-foreground">
-              Email cannot be changed
-            </p>
+            <Input id="email" value={user.email ?? ""} disabled className="bg-muted max-w-xs" />
+            <p className="text-muted-foreground text-xs">Email cannot be changed</p>
           </div>
         </CardContent>
       </Card>

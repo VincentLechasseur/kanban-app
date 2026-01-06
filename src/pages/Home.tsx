@@ -3,12 +3,7 @@ import { useQuery, useMutation } from "convex/react";
 import { useNavigate } from "react-router-dom";
 import { api } from "../../convex/_generated/api";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Dialog,
   DialogContent,
@@ -85,8 +80,7 @@ export function HomePage() {
             <DialogHeader>
               <DialogTitle>Create a new board</DialogTitle>
               <DialogDescription>
-                Add a new board to organize your tasks and collaborate with your
-                team.
+                Add a new board to organize your tasks and collaborate with your team.
               </DialogDescription>
             </DialogHeader>
             <div className="space-y-4 py-4">
@@ -111,17 +105,10 @@ export function HomePage() {
               </div>
             </div>
             <DialogFooter>
-              <Button
-                variant="outline"
-                onClick={() => setIsOpen(false)}
-                disabled={isCreating}
-              >
+              <Button variant="outline" onClick={() => setIsOpen(false)} disabled={isCreating}>
                 Cancel
               </Button>
-              <Button
-                onClick={handleCreate}
-                disabled={!name.trim() || isCreating}
-              >
+              <Button onClick={handleCreate} disabled={!name.trim() || isCreating}>
                 {isCreating ? "Creating..." : "Create Board"}
               </Button>
             </DialogFooter>
@@ -131,9 +118,9 @@ export function HomePage() {
 
       {boards.length === 0 ? (
         <div className="flex flex-col items-center justify-center rounded-lg border-2 border-dashed py-16">
-          <Kanban className="mb-4 h-12 w-12 text-muted-foreground" />
+          <Kanban className="text-muted-foreground mb-4 h-12 w-12" />
           <h2 className="mb-2 text-xl font-medium">No boards yet</h2>
-          <p className="mb-4 text-muted-foreground">
+          <p className="text-muted-foreground mb-4">
             Create your first board to start organizing tasks
           </p>
           <Button onClick={() => setIsOpen(true)}>
@@ -153,22 +140,20 @@ export function HomePage() {
               >
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
-                    <Kanban className="h-5 w-5 text-primary" />
+                    <Kanban className="text-primary h-5 w-5" />
                     {board.name}
                     {hasUnread && (
                       <span className="relative ml-auto">
-                        <MessageCircle className="h-4 w-4 text-muted-foreground" />
-                        <span className="absolute -right-1 -top-1 h-2 w-2 rounded-full bg-destructive" />
+                        <MessageCircle className="text-muted-foreground h-4 w-4" />
+                        <span className="bg-destructive absolute -top-1 -right-1 h-2 w-2 rounded-full" />
                       </span>
                     )}
                   </CardTitle>
                   {board.description && (
-                    <CardDescription className="line-clamp-2">
-                      {board.description}
-                    </CardDescription>
+                    <CardDescription className="line-clamp-2">{board.description}</CardDescription>
                   )}
                   {board.memberIds.length > 0 && (
-                    <div className="flex items-center gap-1 pt-2 text-sm text-muted-foreground">
+                    <div className="text-muted-foreground flex items-center gap-1 pt-2 text-sm">
                       <Users className="h-4 w-4" />
                       <span>{board.memberIds.length + 1} members</span>
                     </div>

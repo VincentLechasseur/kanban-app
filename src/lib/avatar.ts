@@ -34,10 +34,7 @@ export function getAvatarColor(userId: string): { bg: string; fg: string } {
  * Get initials from a name (1-2 characters)
  * Falls back to email's first letter if name is not provided
  */
-export function getInitials(
-  name: string | undefined | null,
-  email?: string | null
-): string {
+export function getInitials(name: string | undefined | null, email?: string | null): string {
   if (name) {
     const parts = name.trim().split(/\s+/);
     if (parts.length === 1) {

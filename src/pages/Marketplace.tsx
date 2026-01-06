@@ -4,13 +4,7 @@ import { api } from "../../convex/_generated/api";
 import type { Id } from "../../convex/_generated/dataModel";
 import { UserAvatar } from "@/components/UserAvatar";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Dialog,
   DialogContent,
@@ -36,9 +30,7 @@ export function MarketplacePage() {
   const [message, setMessage] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const pendingRequestBoardIds = new Set(
-    userRequests?.map((r) => r.boardId) ?? []
-  );
+  const pendingRequestBoardIds = new Set(userRequests?.map((r) => r.boardId) ?? []);
 
   const handleRequestToJoin = (boardId: Id<"boards">) => {
     setSelectedBoardId(boardId);
@@ -57,9 +49,7 @@ export function MarketplacePage() {
       toast.success("Join request sent!");
       setRequestDialogOpen(false);
     } catch (error) {
-      toast.error(
-        error instanceof Error ? error.message : "Failed to send request"
-      );
+      toast.error(error instanceof Error ? error.message : "Failed to send request");
     } finally {
       setIsSubmitting(false);
     }
@@ -96,19 +86,19 @@ export function MarketplacePage() {
     <div className="p-6">
       <div className="mb-6">
         <h1 className="flex items-center gap-2 text-2xl font-semibold">
-          <Globe className="h-6 w-6 text-primary" />
+          <Globe className="text-primary h-6 w-6" />
           Board Marketplace
         </h1>
-        <p className="mt-1 text-muted-foreground">
+        <p className="text-muted-foreground mt-1">
           Discover public boards and request to join teams
         </p>
       </div>
 
       {boards.length === 0 ? (
         <div className="flex flex-col items-center justify-center rounded-lg border-2 border-dashed py-16">
-          <Globe className="mb-4 h-12 w-12 text-muted-foreground" />
+          <Globe className="text-muted-foreground mb-4 h-12 w-12" />
           <h2 className="mb-2 text-xl font-medium">No public boards yet</h2>
-          <p className="text-center text-muted-foreground">
+          <p className="text-muted-foreground text-center">
             When board owners make their boards public,
             <br />
             they will appear here for you to discover.
@@ -123,15 +113,13 @@ export function MarketplacePage() {
               <Card key={board._id} className="flex flex-col">
                 <CardHeader className="flex-1">
                   <CardTitle className="flex items-center gap-2">
-                    <Kanban className="h-5 w-5 text-primary" />
+                    <Kanban className="text-primary h-5 w-5" />
                     {board.name}
                   </CardTitle>
                   {board.description && (
-                    <CardDescription className="line-clamp-2">
-                      {board.description}
-                    </CardDescription>
+                    <CardDescription className="line-clamp-2">{board.description}</CardDescription>
                   )}
-                  <div className="flex items-center gap-4 pt-2 text-sm text-muted-foreground">
+                  <div className="text-muted-foreground flex items-center gap-4 pt-2 text-sm">
                     <div className="flex items-center gap-1">
                       <Users className="h-4 w-4" />
                       <span>{board.memberCount} members</span>
@@ -146,7 +134,7 @@ export function MarketplacePage() {
                       className="h-6 w-6"
                       fallbackClassName="text-xs"
                     />
-                    <span className="text-sm text-muted-foreground">
+                    <span className="text-muted-foreground text-sm">
                       by {board.owner.name ?? board.owner.email}
                     </span>
                   </div>
@@ -162,10 +150,7 @@ export function MarketplacePage() {
                       Pending - Cancel
                     </Button>
                   ) : (
-                    <Button
-                      className="w-full"
-                      onClick={() => handleRequestToJoin(board._id)}
-                    >
+                    <Button className="w-full" onClick={() => handleRequestToJoin(board._id)}>
                       Request to Join
                     </Button>
                   )}
@@ -182,8 +167,8 @@ export function MarketplacePage() {
           <DialogHeader>
             <DialogTitle>Request to Join</DialogTitle>
             <DialogDescription>
-              Send a request to the board owner. They will review and decide
-              whether to accept you as a member.
+              Send a request to the board owner. They will review and decide whether to accept you
+              as a member.
             </DialogDescription>
           </DialogHeader>
           <div className="py-4">

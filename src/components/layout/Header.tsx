@@ -27,9 +27,7 @@ export function Header({ onMenuClick }: HeaderProps) {
 
   useEffect(() => {
     const stored = localStorage.getItem("theme");
-    const prefersDark = window.matchMedia(
-      "(prefers-color-scheme: dark)"
-    ).matches;
+    const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
     setIsDark(stored === "dark" || (!stored && prefersDark));
   }, []);
 
@@ -39,19 +37,14 @@ export function Header({ onMenuClick }: HeaderProps) {
   }, [isDark]);
 
   return (
-    <header className="flex h-14 items-center justify-between border-b bg-background px-4">
+    <header className="bg-background flex h-14 items-center justify-between border-b px-4">
       <div className="flex items-center gap-3">
-        <Button
-          variant="ghost"
-          size="icon"
-          className="lg:hidden"
-          onClick={onMenuClick}
-        >
+        <Button variant="ghost" size="icon" className="lg:hidden" onClick={onMenuClick}>
           <Menu className="h-5 w-5" />
         </Button>
         <div className="flex items-center gap-2">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary">
-            <Kanban className="h-4 w-4 text-primary-foreground" />
+          <div className="bg-primary flex h-8 w-8 items-center justify-center rounded-lg">
+            <Kanban className="text-primary-foreground h-4 w-4" />
           </div>
           <span className="text-lg font-semibold">Kanban</span>
         </div>
@@ -85,9 +78,7 @@ export function Header({ onMenuClick }: HeaderProps) {
             <DropdownMenuLabel>
               <div className="flex flex-col space-y-1">
                 <p className="text-sm font-medium">{user?.name ?? user?.email}</p>
-                {user?.name && (
-                  <p className="text-xs text-muted-foreground">{user?.email}</p>
-                )}
+                {user?.name && <p className="text-muted-foreground text-xs">{user?.email}</p>}
               </div>
             </DropdownMenuLabel>
             <DropdownMenuSeparator />

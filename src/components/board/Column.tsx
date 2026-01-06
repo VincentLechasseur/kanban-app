@@ -1,10 +1,7 @@
 import { useState } from "react";
 import { useMutation } from "convex/react";
 import { useDroppable } from "@dnd-kit/core";
-import {
-  SortableContext,
-  verticalListSortingStrategy,
-} from "@dnd-kit/sortable";
+import { SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { api } from "../../../convex/_generated/api";
 import type { Doc } from "../../../convex/_generated/dataModel";
 import { KanbanCard } from "./Card";
@@ -92,8 +89,8 @@ export function Column({ column, cards }: ColumnProps) {
   return (
     <div
       className={cn(
-        "flex h-full w-72 shrink-0 flex-col rounded-lg border bg-card",
-        isOver && "ring-2 ring-primary"
+        "bg-card flex h-full w-72 shrink-0 flex-col rounded-lg border",
+        isOver && "ring-primary ring-2"
       )}
     >
       {/* Column Header */}
@@ -116,7 +113,7 @@ export function Column({ column, cards }: ColumnProps) {
         ) : (
           <div className="flex items-center gap-2">
             <h3 className="font-medium">{column.name}</h3>
-            <span className="rounded bg-muted px-1.5 py-0.5 text-xs text-muted-foreground">
+            <span className="bg-muted text-muted-foreground rounded px-1.5 py-0.5 text-xs">
               {cards.length}
             </span>
           </div>
@@ -133,10 +130,7 @@ export function Column({ column, cards }: ColumnProps) {
               <Pencil className="mr-2 h-4 w-4" />
               Rename
             </DropdownMenuItem>
-            <DropdownMenuItem
-              className="text-destructive"
-              onClick={() => setDeleteOpen(true)}
-            >
+            <DropdownMenuItem className="text-destructive" onClick={() => setDeleteOpen(true)}>
               <Trash2 className="mr-2 h-4 w-4" />
               Delete
             </DropdownMenuItem>
@@ -146,25 +140,16 @@ export function Column({ column, cards }: ColumnProps) {
 
       {/* Cards */}
       <ScrollArea className="flex-1 p-2" ref={setNodeRef}>
-        <SortableContext
-          items={cards.map((c) => c._id)}
-          strategy={verticalListSortingStrategy}
-        >
+        <SortableContext items={cards.map((c) => c._id)} strategy={verticalListSortingStrategy}>
           <div className="space-y-2">
             {cards.map((card) => (
-              <KanbanCard
-                key={card._id}
-                card={card}
-                boardId={column.boardId}
-              />
+              <KanbanCard key={card._id} card={card} boardId={column.boardId} />
             ))}
           </div>
         </SortableContext>
 
         {cards.length === 0 && !isAddingCard && (
-          <p className="py-4 text-center text-sm text-muted-foreground">
-            No cards yet
-          </p>
+          <p className="text-muted-foreground py-4 text-center text-sm">No cards yet</p>
         )}
       </ScrollArea>
 
@@ -205,7 +190,7 @@ export function Column({ column, cards }: ColumnProps) {
           <Button
             variant="ghost"
             size="sm"
-            className="w-full justify-start text-muted-foreground"
+            className="text-muted-foreground w-full justify-start"
             onClick={() => setIsAddingCard(true)}
           >
             <Plus className="mr-2 h-4 w-4" />
@@ -220,8 +205,8 @@ export function Column({ column, cards }: ColumnProps) {
           <AlertDialogHeader>
             <AlertDialogTitle>Delete column?</AlertDialogTitle>
             <AlertDialogDescription>
-              This will permanently delete "{column.name}" and all its cards.
-              This action cannot be undone.
+              This will permanently delete "{column.name}" and all its cards. This action cannot be
+              undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

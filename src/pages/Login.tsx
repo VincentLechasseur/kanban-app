@@ -3,13 +3,7 @@ import { useAuthActions } from "@convex-dev/auth/react";
 import { useConvexAuth } from "convex/react";
 import { Navigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
@@ -54,14 +48,12 @@ export function LoginPage() {
     <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-slate-50 to-slate-100 p-4 dark:from-slate-900 dark:to-slate-800">
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
-          <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-primary">
-            <Kanban className="h-6 w-6 text-primary-foreground" />
+          <div className="bg-primary mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-xl">
+            <Kanban className="text-primary-foreground h-6 w-6" />
           </div>
           <CardTitle className="text-2xl">Welcome to Kanban</CardTitle>
           <CardDescription>
-            {isSignUp
-              ? "Create an account to get started"
-              : "Sign in to manage your boards"}
+            {isSignUp ? "Create an account to get started" : "Sign in to manage your boards"}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -117,7 +109,7 @@ export function LoginPage() {
                 Already have an account?{" "}
                 <button
                   type="button"
-                  className="font-medium text-primary hover:underline"
+                  className="text-primary font-medium hover:underline"
                   onClick={() => setIsSignUp(false)}
                 >
                   Sign in
@@ -128,7 +120,7 @@ export function LoginPage() {
                 Don't have an account?{" "}
                 <button
                   type="button"
-                  className="font-medium text-primary hover:underline"
+                  className="text-primary font-medium hover:underline"
                   onClick={() => setIsSignUp(true)}
                 >
                   Sign up
@@ -142,19 +134,13 @@ export function LoginPage() {
               <Separator className="w-full" />
             </div>
             <div className="relative flex justify-center text-xs uppercase">
-              <span className="bg-card px-2 text-muted-foreground">
-                Or continue with
-              </span>
+              <span className="bg-card text-muted-foreground px-2">Or continue with</span>
             </div>
           </div>
 
           {/* OAuth Buttons */}
           <div className="grid grid-cols-2 gap-3">
-            <Button
-              variant="outline"
-              onClick={() => void signIn("github")}
-              disabled={isLoading}
-            >
+            <Button variant="outline" onClick={() => void signIn("github")} disabled={isLoading}>
               <svg className="mr-2 h-4 w-4" viewBox="0 0 24 24">
                 <path
                   fill="currentColor"
@@ -163,11 +149,7 @@ export function LoginPage() {
               </svg>
               GitHub
             </Button>
-            <Button
-              variant="outline"
-              onClick={() => void signIn("google")}
-              disabled={isLoading}
-            >
+            <Button variant="outline" onClick={() => void signIn("google")} disabled={isLoading}>
               <svg className="mr-2 h-4 w-4" viewBox="0 0 24 24">
                 <path
                   fill="#4285F4"
@@ -190,7 +172,7 @@ export function LoginPage() {
             </Button>
           </div>
 
-          <p className="text-center text-xs text-muted-foreground">
+          <p className="text-muted-foreground text-center text-xs">
             By signing in, you agree to our Terms of Service and Privacy Policy
           </p>
         </CardContent>

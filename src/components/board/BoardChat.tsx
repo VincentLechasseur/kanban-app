@@ -9,12 +9,7 @@ import {
   SheetTitle,
   SheetDescription,
 } from "@/components/ui/sheet";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { UserAvatar } from "@/components/UserAvatar";
@@ -72,8 +67,7 @@ export function BoardChat({ boardId, open, onOpenChange }: BoardChatProps) {
     return members.filter(
       (m) =>
         m._id !== currentUser._id &&
-        (m.name?.toLowerCase().includes(search) ||
-          m.email?.toLowerCase().includes(search))
+        (m.name?.toLowerCase().includes(search) || m.email?.toLowerCase().includes(search))
     );
   }, [members, mentionSearch, mentionType, currentUser]);
 
@@ -120,7 +114,10 @@ export function BoardChat({ boardId, open, onOpenChange }: BoardChatProps) {
       setMentionSearch(textBeforeCursor.slice(lastAtBracket + 2));
       return;
     }
-    if (lastExclamationBracket !== -1 && !textBeforeCursor.slice(lastExclamationBracket).includes("]")) {
+    if (
+      lastExclamationBracket !== -1 &&
+      !textBeforeCursor.slice(lastExclamationBracket).includes("]")
+    ) {
       setMentionType("card");
       setMentionSearch(textBeforeCursor.slice(lastExclamationBracket + 2));
       return;
@@ -131,10 +128,18 @@ export function BoardChat({ boardId, open, onOpenChange }: BoardChatProps) {
     const lastExclamationIndex = textBeforeCursor.lastIndexOf("!");
 
     // Check if we're in a mention context (no space between trigger and cursor)
-    if (lastAtIndex !== -1 && lastAtIndex > lastAtBracket && !textBeforeCursor.slice(lastAtIndex).includes(" ")) {
+    if (
+      lastAtIndex !== -1 &&
+      lastAtIndex > lastAtBracket &&
+      !textBeforeCursor.slice(lastAtIndex).includes(" ")
+    ) {
       setMentionType("user");
       setMentionSearch(textBeforeCursor.slice(lastAtIndex + 1));
-    } else if (lastExclamationIndex !== -1 && lastExclamationIndex > lastExclamationBracket && !textBeforeCursor.slice(lastExclamationIndex).includes(" ")) {
+    } else if (
+      lastExclamationIndex !== -1 &&
+      lastExclamationIndex > lastExclamationBracket &&
+      !textBeforeCursor.slice(lastExclamationIndex).includes(" ")
+    ) {
       setMentionType("card");
       setMentionSearch(textBeforeCursor.slice(lastExclamationIndex + 1));
     } else {
@@ -154,7 +159,8 @@ export function BoardChat({ boardId, open, onOpenChange }: BoardChatProps) {
     const simpleIndex = textBeforeCursor.lastIndexOf(triggerChar);
 
     // Determine if we're in bracket mode
-    const inBracketMode = bracketIndex !== -1 && !textBeforeCursor.slice(bracketIndex).includes("]");
+    const inBracketMode =
+      bracketIndex !== -1 && !textBeforeCursor.slice(bracketIndex).includes("]");
 
     // Use bracket syntax if text has spaces or if already in bracket mode
     const needsBrackets = text.includes(" ") || inBracketMode;
@@ -299,9 +305,7 @@ export function BoardChat({ boardId, open, onOpenChange }: BoardChatProps) {
         return (
           <span
             key={i}
-            className={`font-semibold ${
-              isOwn ? "text-primary-foreground" : "text-foreground"
-            }`}
+            className={`font-semibold ${isOwn ? "text-primary-foreground" : "text-foreground"}`}
           >
             {part}
           </span>
@@ -317,23 +321,18 @@ export function BoardChat({ boardId, open, onOpenChange }: BoardChatProps) {
         <SheetContent className="flex h-full flex-col overflow-hidden p-0 sm:max-w-md">
           <SheetHeader className="shrink-0 border-b px-4 py-4">
             <SheetTitle>Team Chat</SheetTitle>
-            <SheetDescription className="sr-only">
-              Chat with your team members
-            </SheetDescription>
+            <SheetDescription className="sr-only">Chat with your team members</SheetDescription>
           </SheetHeader>
 
           {/* Scrollable messages area */}
-          <div
-            ref={scrollContainerRef}
-            className="flex-1 overflow-y-auto px-4"
-          >
+          <div ref={scrollContainerRef} className="flex-1 overflow-y-auto px-4">
             {messages === undefined ? (
               <div className="flex h-full items-center justify-center py-8">
-                <div className="h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+                <div className="border-primary h-6 w-6 animate-spin rounded-full border-2 border-t-transparent" />
               </div>
             ) : messages.length === 0 ? (
               <div className="flex h-full items-center justify-center py-8">
-                <p className="text-center text-sm text-muted-foreground">
+                <p className="text-muted-foreground text-center text-sm">
                   No messages yet. Start the conversation!
                 </p>
               </div>
@@ -342,7 +341,7 @@ export function BoardChat({ boardId, open, onOpenChange }: BoardChatProps) {
                 {groupedMessages.map((group) => (
                   <div key={group.date}>
                     <div className="mb-2 flex justify-center">
-                      <span className="rounded-full bg-muted px-3 py-1 text-xs text-muted-foreground">
+                      <span className="bg-muted text-muted-foreground rounded-full px-3 py-1 text-xs">
                         {group.date}
                       </span>
                     </div>
@@ -367,16 +366,14 @@ export function BoardChat({ boardId, open, onOpenChange }: BoardChatProps) {
                             >
                               <div
                                 className={`rounded-lg px-3 py-2 ${
-                                  isOwn
-                                    ? "bg-primary text-primary-foreground"
-                                    : "bg-muted"
+                                  isOwn ? "bg-primary text-primary-foreground" : "bg-muted"
                                 }`}
                               >
-                                <p className="text-sm whitespace-pre-wrap break-words">
+                                <p className="text-sm break-words whitespace-pre-wrap">
                                   {renderMessageContent(message.content, isOwn)}
                                 </p>
                               </div>
-                              <span className="mt-1 text-xs text-muted-foreground">
+                              <span className="text-muted-foreground mt-1 text-xs">
                                 {formatTime(message.createdAt)}
                               </span>
                             </div>
@@ -393,8 +390,8 @@ export function BoardChat({ boardId, open, onOpenChange }: BoardChatProps) {
           <div className="shrink-0 border-t p-4">
             {/* Mention suggestions popup */}
             {mentionType && suggestions.length > 0 && (
-              <div className="mb-2 max-h-48 overflow-y-auto rounded-md border bg-popover p-1 shadow-md">
-                <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground">
+              <div className="bg-popover mb-2 max-h-48 overflow-y-auto rounded-md border p-1 shadow-md">
+                <div className="text-muted-foreground px-2 py-1.5 text-xs font-semibold">
                   {mentionType === "user" ? "Team Members" : "Cards"}
                 </div>
                 {mentionType === "user"
@@ -411,9 +408,7 @@ export function BoardChat({ boardId, open, onOpenChange }: BoardChatProps) {
                         <User className="h-4 w-4" />
                         <span>{user.name ?? user.email}</span>
                         {user.name && (
-                          <span className="text-xs text-muted-foreground">
-                            {user.email}
-                          </span>
+                          <span className="text-muted-foreground text-xs">{user.email}</span>
                         )}
                       </button>
                     ))
@@ -454,22 +449,22 @@ export function BoardChat({ boardId, open, onOpenChange }: BoardChatProps) {
                     <div className="space-y-2 text-sm">
                       <p className="font-semibold">Shortcuts</p>
                       <div className="flex items-center gap-2">
-                        <kbd className="rounded border border-input bg-secondary px-1.5 py-0.5 text-xs font-mono text-secondary-foreground">@</kbd>
+                        <kbd className="border-input bg-secondary text-secondary-foreground rounded border px-1.5 py-0.5 font-mono text-xs">
+                          @
+                        </kbd>
                         <span>Mention a team member</span>
                       </div>
                       <div className="flex items-center gap-2">
-                        <kbd className="rounded border border-input bg-secondary px-1.5 py-0.5 text-xs font-mono text-secondary-foreground">!</kbd>
+                        <kbd className="border-input bg-secondary text-secondary-foreground rounded border px-1.5 py-0.5 font-mono text-xs">
+                          !
+                        </kbd>
                         <span>Reference a card (clickable)</span>
                       </div>
                     </div>
                   </TooltipContent>
                 </Tooltip>
               </TooltipProvider>
-              <Button
-                size="icon"
-                onClick={handleSend}
-                disabled={!content.trim() || isSending}
-              >
+              <Button size="icon" onClick={handleSend} disabled={!content.trim() || isSending}>
                 <Send className="h-4 w-4" />
               </Button>
             </div>

@@ -35,24 +35,28 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { UserAvatar } from "@/components/UserAvatar";
 import { Badge } from "@/components/ui/badge";
-import { Globe, Lock, MessageCircle, MoreHorizontal, Pencil, Trash2, Users } from "lucide-react";
+import {
+  Globe,
+  Lock,
+  MessageCircle,
+  MoreHorizontal,
+  Pencil,
+  Search,
+  Trash2,
+  UserCircle2,
+  Users,
+  X,
+} from "lucide-react";
 import { toast } from "sonner";
+import { cn } from "@/lib/utils";
 
 export function BoardPage() {
   const { boardId } = useParams<{ boardId: string }>();
   const navigate = useNavigate();
-  const board = useQuery(
-    api.boards.get,
-    boardId ? { id: boardId as Id<"boards"> } : "skip"
-  );
+  const board = useQuery(api.boards.get, boardId ? { id: boardId as Id<"boards"> } : "skip");
   const members = useQuery(
     api.boards.getMembers,
     boardId ? { boardId: boardId as Id<"boards"> } : "skip"
@@ -77,6 +81,29 @@ export function BoardPage() {
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [isUpdating, setIsUpdating] = useState(false);
+
+  // Filter state
+  const [searchQuery, setSearchQuery] = useState("");
+  const [selectedAssigneeIds, setSelectedAssigneeIds] = useState<Set<Id<"users">>>(new Set());
+
+  const toggleAssigneeFilter = (userId: Id<"users">) => {
+    setSelectedAssigneeIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(userId)) {
+        next.delete(userId);
+      } else {
+        next.add(userId);
+      }
+      return next;
+    });
+  };
+
+  const clearFilters = () => {
+    setSearchQuery("");
+    setSelectedAssigneeIds(new Set());
+  };
+
+  const hasActiveFilters = searchQuery.trim() !== "" || selectedAssigneeIds.size > 0;
 
   if (!boardId) {
     return (
@@ -105,9 +132,7 @@ export function BoardPage() {
   if (board === null) {
     return (
       <div className="flex h-full items-center justify-center">
-        <p className="text-muted-foreground">
-          Board not found or you don't have access
-        </p>
+        <p className="text-muted-foreground">Board not found or you don't have access</p>
       </div>
     );
   }
@@ -161,7 +186,7 @@ export function BoardPage() {
 
   return (
     <div className="flex h-full flex-col">
-      <div className="flex items-center justify-between border-b bg-background px-6 py-4">
+      <div className="bg-background flex items-center justify-between border-b px-6 py-4">
         <div>
           <div className="flex items-center gap-2">
             <h1 className="text-xl font-semibold">{board.name}</h1>
@@ -183,8 +208,114 @@ export function BoardPage() {
             )}
           </div>
           {board.description && (
-            <p className="text-sm text-muted-foreground">{board.description}</p>
+            <p className="text-muted-foreground text-sm">{board.description}</p>
           )}
+        </div>
+
+        {/* Filter Bar */}
+        <div className="flex items-center gap-4">
+          {/* Search */}
+          <div className="relative">
+            <Search className="text-muted-foreground absolute top-1/2 left-2.5 h-4 w-4 -translate-y-1/2" />
+            <Input
+              placeholder="Search cards..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="h-8 w-48 pr-8 pl-8"
+            />
+            {searchQuery && (
+              <Button
+                variant="ghost"
+                size="icon"
+                className="absolute top-1/2 right-0.5 h-7 w-7 -translate-y-1/2"
+                onClick={() => setSearchQuery("")}
+              >
+                <X className="h-3 w-3" />
+              </Button>
+            )}
+          </div>
+
+          {/* Assignee Filter */}
+          <TooltipProvider>
+            <div className="flex items-center gap-1">
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button
+                    onClick={() => setSelectedAssigneeIds(new Set())}
+                    className={cn(
+                      "flex h-8 w-8 items-center justify-center rounded-full border-2 transition-all",
+                      selectedAssigneeIds.size === 0
+                        ? "border-primary bg-primary/10"
+                        : "hover:border-muted-foreground/30 border-transparent"
+                    )}
+                  >
+                    <UserCircle2
+                      className={cn(
+                        "h-5 w-5",
+                        selectedAssigneeIds.size === 0 ? "text-primary" : "text-muted-foreground"
+                      )}
+                    />
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>All assignees</p>
+                </TooltipContent>
+              </Tooltip>
+
+              {members?.map((member) => (
+                <Tooltip key={member._id}>
+                  <TooltipTrigger asChild>
+                    <button
+                      onClick={() => toggleAssigneeFilter(member._id)}
+                      className={cn(
+                        "rounded-full border-2 transition-all",
+                        selectedAssigneeIds.has(member._id)
+                          ? "border-primary"
+                          : "hover:border-muted-foreground/30 border-transparent"
+                      )}
+                    >
+                      <UserAvatar
+                        userId={member._id}
+                        name={member.name}
+                        email={member.email}
+                        image={member.image}
+                        className={cn(
+                          "h-7 w-7",
+                          !selectedAssigneeIds.has(member._id) &&
+                            selectedAssigneeIds.size > 0 &&
+                            "opacity-40"
+                        )}
+                        fallbackClassName="text-xs"
+                      />
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>{member.name ?? member.email}</p>
+                  </TooltipContent>
+                </Tooltip>
+              ))}
+
+              {hasActiveFilters && (
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="ml-1 h-7 w-7"
+                      onClick={clearFilters}
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Clear filters</p>
+                  </TooltipContent>
+                </Tooltip>
+              )}
+            </div>
+          </TooltipProvider>
+
+          <div className="bg-border h-6 w-px" />
         </div>
 
         <div className="flex items-center gap-3">
@@ -201,7 +332,7 @@ export function BoardPage() {
                           name={member.name}
                           email={member.email}
                           image={member.image}
-                          className="h-8 w-8 border-2 border-background"
+                          className="border-background h-8 w-8 border-2"
                           fallbackClassName="text-xs"
                         />
                       </span>
@@ -212,7 +343,7 @@ export function BoardPage() {
                   </Tooltip>
                 ))}
                 {members && members.length > 4 && (
-                  <div className="flex h-8 w-8 items-center justify-center rounded-full border-2 border-background bg-muted text-xs font-medium">
+                  <div className="border-background bg-muted flex h-8 w-8 items-center justify-center rounded-full border-2 text-xs font-medium">
                     +{members.length - 4}
                   </div>
                 )}
@@ -238,7 +369,7 @@ export function BoardPage() {
           >
             <MessageCircle className="h-5 w-5" />
             {hasUnreadMessages && (
-              <span className="absolute -right-1 -top-1 h-3 w-3 rounded-full bg-destructive" />
+              <span className="bg-destructive absolute -top-1 -right-1 h-3 w-3 rounded-full" />
             )}
           </Button>
 
@@ -274,10 +405,7 @@ export function BoardPage() {
                 </DropdownMenuItem>
               )}
               <DropdownMenuSeparator />
-              <DropdownMenuItem
-                className="text-destructive"
-                onClick={() => setDeleteOpen(true)}
-              >
+              <DropdownMenuItem className="text-destructive" onClick={() => setDeleteOpen(true)}>
                 <Trash2 className="mr-2 h-4 w-4" />
                 Delete board
               </DropdownMenuItem>
@@ -286,7 +414,11 @@ export function BoardPage() {
         </div>
       </div>
 
-      <Board boardId={board._id} />
+      <Board
+        boardId={board._id}
+        searchQuery={searchQuery}
+        selectedAssigneeIds={selectedAssigneeIds}
+      />
 
       {/* Members Modal */}
       <MembersModal
@@ -297,29 +429,19 @@ export function BoardPage() {
       />
 
       {/* Team Chat */}
-      <BoardChat
-        boardId={board._id}
-        open={chatOpen}
-        onOpenChange={setChatOpen}
-      />
+      <BoardChat boardId={board._id} open={chatOpen} onOpenChange={setChatOpen} />
 
       {/* Edit Dialog */}
       <Dialog open={editOpen} onOpenChange={setEditOpen}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Edit board</DialogTitle>
-            <DialogDescription>
-              Update your board's name and description.
-            </DialogDescription>
+            <DialogDescription>Update your board's name and description.</DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="space-y-2">
               <Label htmlFor="edit-name">Board name</Label>
-              <Input
-                id="edit-name"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-              />
+              <Input id="edit-name" value={name} onChange={(e) => setName(e.target.value)} />
             </div>
             <div className="space-y-2">
               <Label htmlFor="edit-description">Description</Label>
@@ -347,8 +469,8 @@ export function BoardPage() {
           <AlertDialogHeader>
             <AlertDialogTitle>Delete board?</AlertDialogTitle>
             <AlertDialogDescription>
-              This will permanently delete "{board.name}" and all its columns
-              and cards. This action cannot be undone.
+              This will permanently delete "{board.name}" and all its columns and cards. This action
+              cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

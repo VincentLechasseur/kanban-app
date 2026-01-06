@@ -11,10 +11,7 @@ import {
   type DragStartEvent,
   type DragEndEvent,
 } from "@dnd-kit/core";
-import {
-  SortableContext,
-  horizontalListSortingStrategy,
-} from "@dnd-kit/sortable";
+import { SortableContext, horizontalListSortingStrategy } from "@dnd-kit/sortable";
 import { api } from "../../../convex/_generated/api";
 import type { Id, Doc } from "../../../convex/_generated/dataModel";
 import { Column } from "./Column";
@@ -27,9 +24,11 @@ import { toast } from "sonner";
 
 interface BoardProps {
   boardId: Id<"boards">;
+  searchQuery?: string;
+  selectedAssigneeIds?: Set<Id<"users">>;
 }
 
-export function Board({ boardId }: BoardProps) {
+export function Board({ boardId, searchQuery = "", selectedAssigneeIds }: BoardProps) {
   const columns = useQuery(api.columns.list, { boardId });
   const cards = useQuery(api.cards.listByBoard, { boardId });
   const createColumn = useMutation(api.columns.create);
@@ -48,9 +47,32 @@ export function Board({ boardId }: BoardProps) {
     useSensor(KeyboardSensor)
   );
 
+  // Filter cards based on search and assignee filters
+  const filteredCards = useMemo(() => {
+    if (!cards) return [];
+
+    return cards.filter((card) => {
+      // Search filter
+      if (searchQuery.trim()) {
+        const query = searchQuery.toLowerCase();
+        const titleMatch = card.title.toLowerCase().includes(query);
+        const descMatch = card.description?.toLowerCase().includes(query) ?? false;
+        if (!titleMatch && !descMatch) return false;
+      }
+
+      // Assignee filter
+      if (selectedAssigneeIds && selectedAssigneeIds.size > 0) {
+        const hasMatchingAssignee = card.assigneeIds.some((id) => selectedAssigneeIds.has(id));
+        if (!hasMatchingAssignee) return false;
+      }
+
+      return true;
+    });
+  }, [cards, searchQuery, selectedAssigneeIds]);
+
   const cardsByColumn = useMemo(() => {
-    if (!cards) return {};
-    return cards.reduce(
+    if (!filteredCards) return {};
+    return filteredCards.reduce(
       (acc, card) => {
         const colId = card.columnId;
         if (!acc[colId]) acc[colId] = [];
@@ -59,7 +81,7 @@ export function Board({ boardId }: BoardProps) {
       },
       {} as Record<string, Doc<"cards">[]>
     );
-  }, [cards]);
+  }, [filteredCards]);
 
   const handleDragStart = (event: DragStartEvent) => {
     const { active } = event;
@@ -152,18 +174,14 @@ export function Board({ boardId }: BoardProps) {
             strategy={horizontalListSortingStrategy}
           >
             {columns.map((column) => (
-              <Column
-                key={column._id}
-                column={column}
-                cards={cardsByColumn[column._id] || []}
-              />
+              <Column key={column._id} column={column} cards={cardsByColumn[column._id] || []} />
             ))}
           </SortableContext>
 
           {/* Add Column */}
           <div className="w-72 shrink-0">
             {isAddingColumn ? (
-              <div className="rounded-lg border bg-card p-3">
+              <div className="bg-card rounded-lg border p-3">
                 <Input
                   autoFocus
                   placeholder="Column name..."
@@ -196,7 +214,7 @@ export function Board({ boardId }: BoardProps) {
             ) : (
               <Button
                 variant="ghost"
-                className="w-full justify-start text-muted-foreground"
+                className="text-muted-foreground w-full justify-start"
                 onClick={() => setIsAddingColumn(true)}
               >
                 <Plus className="mr-2 h-4 w-4" />
@@ -209,9 +227,7 @@ export function Board({ boardId }: BoardProps) {
       </ScrollArea>
 
       <DragOverlay>
-        {activeCard && (
-          <KanbanCard card={activeCard} boardId={boardId} isDragging />
-        )}
+        {activeCard && <KanbanCard card={activeCard} boardId={boardId} isDragging />}
       </DragOverlay>
     </DndContext>
   );

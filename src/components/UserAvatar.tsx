@@ -23,7 +23,7 @@ export function UserAvatar({
   const initials = getInitials(name, email);
 
   return (
-    <Avatar className={cn("ring-1 ring-border", className)}>
+    <Avatar className={cn("ring-border ring-1", className)}>
       {image && <AvatarImage src={image} alt={name ?? "User"} />}
       <AvatarFallback
         className={cn("font-medium", fallbackClassName)}

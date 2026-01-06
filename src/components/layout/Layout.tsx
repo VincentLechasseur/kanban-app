@@ -58,7 +58,7 @@ export function Layout() {
 
       <div className="flex flex-1 overflow-hidden">
         {/* Desktop Sidebar */}
-        <aside className="hidden w-64 border-r bg-card lg:block">
+        <aside className="bg-card hidden w-64 border-r lg:block">
           <Sidebar onCreateBoard={openCreateDialog} />
         </aside>
 
@@ -70,7 +70,7 @@ export function Layout() {
         </Sheet>
 
         {/* Main Content */}
-        <main className="flex-1 overflow-auto bg-muted/30">
+        <main className="bg-muted/30 flex-1 overflow-auto">
           <Outlet />
         </main>
       </div>
@@ -81,8 +81,7 @@ export function Layout() {
           <DialogHeader>
             <DialogTitle>Create a new board</DialogTitle>
             <DialogDescription>
-              Add a new board to organize your tasks and collaborate with your
-              team.
+              Add a new board to organize your tasks and collaborate with your team.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
@@ -107,17 +106,10 @@ export function Layout() {
             </div>
           </div>
           <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setCreateOpen(false)}
-              disabled={isCreating}
-            >
+            <Button variant="outline" onClick={() => setCreateOpen(false)} disabled={isCreating}>
               Cancel
             </Button>
-            <Button
-              onClick={handleCreate}
-              disabled={!name.trim() || isCreating}
-            >
+            <Button onClick={handleCreate} disabled={!name.trim() || isCreating}>
               {isCreating ? "Creating..." : "Create Board"}
             </Button>
           </DialogFooter>

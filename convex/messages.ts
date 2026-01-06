@@ -101,9 +101,7 @@ export const markAsRead = mutation({
     // Find existing read status
     const existing = await ctx.db
       .query("chatReadStatus")
-      .withIndex("by_board_user", (q) =>
-        q.eq("boardId", args.boardId).eq("userId", userId)
-      )
+      .withIndex("by_board_user", (q) => q.eq("boardId", args.boardId).eq("userId", userId))
       .first();
 
     if (existing) {
@@ -137,9 +135,7 @@ export const hasUnread = query({
     // Get user's last read time
     const readStatus = await ctx.db
       .query("chatReadStatus")
-      .withIndex("by_board_user", (q) =>
-        q.eq("boardId", args.boardId).eq("userId", userId)
-      )
+      .withIndex("by_board_user", (q) => q.eq("boardId", args.boardId).eq("userId", userId))
       .first();
 
     const lastReadAt = readStatus?.lastReadAt ?? 0;
@@ -149,10 +145,7 @@ export const hasUnread = query({
       .query("messages")
       .withIndex("by_board", (q) => q.eq("boardId", args.boardId))
       .filter((q) =>
-        q.and(
-          q.gt(q.field("createdAt"), lastReadAt),
-          q.neq(q.field("userId"), userId)
-        )
+        q.and(q.gt(q.field("createdAt"), lastReadAt), q.neq(q.field("userId"), userId))
       )
       .first();
 
@@ -185,9 +178,7 @@ export const getUnreadBoards = query({
     for (const board of userBoards) {
       const readStatus = await ctx.db
         .query("chatReadStatus")
-        .withIndex("by_board_user", (q) =>
-          q.eq("boardId", board._id).eq("userId", userId)
-        )
+        .withIndex("by_board_user", (q) => q.eq("boardId", board._id).eq("userId", userId))
         .first();
 
       const lastReadAt = readStatus?.lastReadAt ?? 0;
@@ -196,10 +187,7 @@ export const getUnreadBoards = query({
         .query("messages")
         .withIndex("by_board", (q) => q.eq("boardId", board._id))
         .filter((q) =>
-          q.and(
-            q.gt(q.field("createdAt"), lastReadAt),
-            q.neq(q.field("userId"), userId)
-          )
+          q.and(q.gt(q.field("createdAt"), lastReadAt), q.neq(q.field("userId"), userId))
         )
         .first();
 

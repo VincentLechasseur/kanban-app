@@ -57,7 +57,7 @@ export function KanbanCard({ card, boardId, isDragging }: KanbanCardProps) {
         {...attributes}
         {...listeners}
         className={cn(
-          "cursor-grab rounded-lg border bg-background p-3 shadow-sm transition-shadow hover:shadow-md active:cursor-grabbing",
+          "bg-background cursor-grab rounded-lg border p-3 shadow-sm transition-shadow hover:shadow-md active:cursor-grabbing",
           (isDragging || isSortableDragging) && "opacity-50 shadow-lg",
           isDragging && "rotate-3"
         )}
@@ -82,9 +82,7 @@ export function KanbanCard({ card, boardId, isDragging }: KanbanCardProps) {
 
         {/* Description preview */}
         {card.description && (
-          <p className="mt-1 line-clamp-2 text-xs text-muted-foreground">
-            {card.description}
-          </p>
+          <p className="text-muted-foreground mt-1 line-clamp-2 text-xs">{card.description}</p>
         )}
 
         {/* Footer */}
@@ -119,12 +117,12 @@ export function KanbanCard({ card, boardId, isDragging }: KanbanCardProps) {
                     name={user.name}
                     email={user.email}
                     image={user.image}
-                    className="h-6 w-6 border-2 border-background"
+                    className="border-background h-6 w-6 border-2"
                     fallbackClassName="text-xs"
                   />
                 ))}
                 {assignees.length > 3 && (
-                  <div className="flex h-6 w-6 items-center justify-center rounded-full border-2 border-background bg-muted text-xs">
+                  <div className="border-background bg-muted flex h-6 w-6 items-center justify-center rounded-full border-2 text-xs">
                     +{assignees.length - 3}
                   </div>
                 )}
@@ -134,12 +132,7 @@ export function KanbanCard({ card, boardId, isDragging }: KanbanCardProps) {
         )}
       </div>
 
-      <CardModal
-        card={card}
-        boardId={boardId}
-        open={modalOpen}
-        onOpenChange={setModalOpen}
-      />
+      <CardModal card={card} boardId={boardId} open={modalOpen} onOpenChange={setModalOpen} />
     </>
   );
 }

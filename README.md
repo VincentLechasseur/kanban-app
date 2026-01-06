@@ -15,12 +15,18 @@ A real-time collaborative Kanban board application built with Convex, React, and
 | Styling | [Tailwind CSS](https://tailwindcss.com/) |
 | Drag & Drop | [@dnd-kit](https://dndkit.com/) |
 | Icons | [Lucide React](https://lucide.dev/) |
+| Linting | [oxlint](https://oxc.rs/docs/guide/usage/linter.html) (fast Rust-based linter) |
+| Formatting | [Prettier](https://prettier.io/) + [prettier-plugin-tailwindcss](https://github.com/tailwindlabs/prettier-plugin-tailwindcss) |
+| Dead Code | [Knip](https://knip.dev/) (find unused files, exports, dependencies) |
+| Git Hooks | [Lefthook](https://github.com/evilmartians/lefthook) (fast git hooks manager) |
 
 ## Features
 
 - **Real-time collaboration** - Changes sync instantly across all connected clients
 - **Drag & drop** - Reorder cards within columns and move between columns
 - **Team boards** - Invite members to collaborate on boards
+- **Board marketplace** - Discover public boards and request to join
+- **Team chat** - Real-time messaging with @user and !card mentions
 - **Card management** - Labels, assignees, due dates, descriptions
 - **Profile customization** - Upload profile pictures, colored avatar initials
 - **Dark mode** - Toggle between light and dark themes
@@ -131,9 +137,53 @@ kanban-app/
 | `bun run dev` | Start the development server |
 | `bun run build` | Build for production |
 | `bun run preview` | Preview production build |
-| `bun run lint` | Run ESLint |
+| `bun run typecheck` | Run TypeScript type checking |
+| `bun run lint` | Run oxlint (fast Rust-based linter) |
+| `bun run lint:eslint` | Run ESLint |
+| `bun run format` | Format code with Prettier |
+| `bun run format:check` | Check code formatting |
+| `bun run knip` | Find unused code and dependencies |
 | `bunx convex dev` | Start Convex dev server |
 | `bunx convex dashboard` | Open Convex dashboard |
+
+## Code Quality
+
+This project uses several tools to maintain code quality:
+
+### Pre-commit Hooks (Lefthook)
+
+Automatically runs on every commit:
+- **Prettier** - Checks code formatting
+- **oxlint** - Lints staged files
+- **TypeScript** - Type checks the codebase
+
+Pre-push hook runs the full build to prevent broken deployments.
+
+### Formatting
+
+Prettier is configured with Tailwind CSS class sorting:
+
+```bash
+bun run format        # Format all files
+bun run format:check  # Check without modifying
+```
+
+### Linting
+
+oxlint provides fast linting (50-100x faster than ESLint):
+
+```bash
+bun run lint          # Run oxlint
+bun run lint:eslint   # Run ESLint (for comparison)
+```
+
+### Dead Code Detection
+
+Knip finds unused files, exports, and dependencies:
+
+```bash
+bun run knip
+```
 
 ## Database Schema
 
@@ -142,6 +192,9 @@ kanban-app/
 - **columns** - Board columns with ordering
 - **cards** - Cards with labels, assignees, due dates
 - **labels** - Color-coded labels per board
+- **joinRequests** - Requests to join public boards
+- **messages** - Team chat messages per board
+- **chatReadStatus** - Tracks unread messages per user/board
 
 ## License
 

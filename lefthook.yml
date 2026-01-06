@@ -1,0 +1,18 @@
+pre-commit:
+  parallel: true
+  jobs:
+    - name: prettier
+      glob: "*.{ts,tsx,js,json,css}"
+      run: bunx prettier --check {staged_files}
+
+    - name: oxlint
+      glob: "*.{ts,tsx}"
+      run: bunx oxlint {staged_files}
+
+    - name: typecheck
+      run: bun run typecheck
+
+pre-push:
+  jobs:
+    - name: build
+      run: bun run build

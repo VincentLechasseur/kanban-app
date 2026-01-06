@@ -4,12 +4,7 @@ import { api } from "../../../convex/_generated/api";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import { Globe, Home, Kanban, Plus } from "lucide-react";
 
@@ -31,10 +26,7 @@ export function Sidebar({ onCreateBoard }: SidebarProps) {
       <div className="space-y-1 p-4">
         <Button
           variant="ghost"
-          className={cn(
-            "w-full justify-start",
-            isHome && "bg-accent text-accent-foreground"
-          )}
+          className={cn("w-full justify-start", isHome && "bg-accent text-accent-foreground")}
           onClick={() => navigate("/")}
         >
           <Home className="mr-2 h-4 w-4" />
@@ -55,15 +47,8 @@ export function Sidebar({ onCreateBoard }: SidebarProps) {
 
       <div className="px-4 py-2">
         <div className="flex items-center justify-between">
-          <span className="text-xs font-semibold uppercase text-muted-foreground">
-            Boards
-          </span>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-6 w-6"
-            onClick={onCreateBoard}
-          >
+          <span className="text-muted-foreground text-xs font-semibold uppercase">Boards</span>
+          <Button variant="ghost" size="icon" className="h-6 w-6" onClick={onCreateBoard}>
             <Plus className="h-4 w-4" />
           </Button>
         </div>
@@ -77,9 +62,7 @@ export function Sidebar({ onCreateBoard }: SidebarProps) {
             ))}
           </div>
         ) : boards.length === 0 ? (
-          <p className="py-4 text-center text-sm text-muted-foreground">
-            No boards yet
-          </p>
+          <p className="text-muted-foreground py-4 text-center text-sm">No boards yet</p>
         ) : (
           <TooltipProvider delayDuration={300}>
             <div className="space-y-1">

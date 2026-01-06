@@ -4,12 +4,7 @@ import { format } from "date-fns";
 import { api } from "../../../convex/_generated/api";
 import type { Doc, Id } from "../../../convex/_generated/dataModel";
 import { UserAvatar } from "@/components/UserAvatar";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -26,20 +21,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Calendar } from "@/components/ui/calendar";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Separator } from "@/components/ui/separator";
-import {
-  CalendarIcon,
-  Check,
-  Tag,
-  Trash2,
-  User,
-  X,
-} from "lucide-react";
+import { CalendarIcon, Check, Tag, Trash2, User, X } from "lucide-react";
 import { toast } from "sonner";
 
 interface CardModalProps {
@@ -187,7 +171,7 @@ export function CardModal({ card, boardId, open, onOpenChange }: CardModalProps)
                     {cardAssignees.map((user) => (
                       <div
                         key={user._id}
-                        className="flex items-center gap-2 rounded-full bg-muted px-2 py-1"
+                        className="bg-muted flex items-center gap-2 rounded-full px-2 py-1"
                       >
                         <UserAvatar
                           userId={user._id}
@@ -207,9 +191,7 @@ export function CardModal({ card, boardId, open, onOpenChange }: CardModalProps)
 
             {/* Sidebar Actions */}
             <div className="space-y-3">
-              <p className="text-xs font-semibold uppercase text-muted-foreground">
-                Add to card
-              </p>
+              <p className="text-muted-foreground text-xs font-semibold uppercase">Add to card</p>
 
               {/* Labels */}
               <Popover open={labelsOpen} onOpenChange={setLabelsOpen}>
@@ -225,7 +207,7 @@ export function CardModal({ card, boardId, open, onOpenChange }: CardModalProps)
                     {labels?.map((label) => (
                       <button
                         key={label._id}
-                        className="flex w-full items-center gap-2 rounded p-2 hover:bg-muted"
+                        className="hover:bg-muted flex w-full items-center gap-2 rounded p-2"
                         onClick={() => handleToggleLabel(label._id)}
                       >
                         <div
@@ -233,9 +215,7 @@ export function CardModal({ card, boardId, open, onOpenChange }: CardModalProps)
                           style={{ backgroundColor: label.color }}
                         />
                         <span className="text-sm">{label.name}</span>
-                        {card.labelIds.includes(label._id) && (
-                          <Check className="h-4 w-4" />
-                        )}
+                        {card.labelIds.includes(label._id) && <Check className="h-4 w-4" />}
                       </button>
                     ))}
                   </div>
@@ -256,7 +236,7 @@ export function CardModal({ card, boardId, open, onOpenChange }: CardModalProps)
                     {members?.map((user) => (
                       <button
                         key={user._id}
-                        className="flex w-full items-center gap-2 rounded p-2 hover:bg-muted"
+                        className="hover:bg-muted flex w-full items-center gap-2 rounded p-2"
                         onClick={() => handleToggleAssignee(user._id)}
                       >
                         <UserAvatar
@@ -268,9 +248,7 @@ export function CardModal({ card, boardId, open, onOpenChange }: CardModalProps)
                           fallbackClassName="text-xs"
                         />
                         <span className="flex-1 text-left text-sm">{user.name ?? user.email}</span>
-                        {card.assigneeIds.includes(user._id) && (
-                          <Check className="h-4 w-4" />
-                        )}
+                        {card.assigneeIds.includes(user._id) && <Check className="h-4 w-4" />}
                       </button>
                     ))}
                   </div>
@@ -282,9 +260,7 @@ export function CardModal({ card, boardId, open, onOpenChange }: CardModalProps)
                 <PopoverTrigger asChild>
                   <Button variant="secondary" size="sm" className="w-full justify-start">
                     <CalendarIcon className="mr-2 h-4 w-4" />
-                    {card.dueDate
-                      ? format(new Date(card.dueDate), "MMM d, yyyy")
-                      : "Due date"}
+                    {card.dueDate ? format(new Date(card.dueDate), "MMM d, yyyy") : "Due date"}
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-auto p-0" align="start">
@@ -299,7 +275,7 @@ export function CardModal({ card, boardId, open, onOpenChange }: CardModalProps)
                       <Button
                         variant="ghost"
                         size="sm"
-                        className="w-full text-destructive"
+                        className="text-destructive w-full"
                         onClick={() => handleSetDueDate(undefined)}
                       >
                         <X className="mr-2 h-4 w-4" />
@@ -312,14 +288,12 @@ export function CardModal({ card, boardId, open, onOpenChange }: CardModalProps)
 
               <Separator className="my-4" />
 
-              <p className="text-xs font-semibold uppercase text-muted-foreground">
-                Actions
-              </p>
+              <p className="text-muted-foreground text-xs font-semibold uppercase">Actions</p>
 
               <Button
                 variant="secondary"
                 size="sm"
-                className="w-full justify-start text-destructive hover:bg-destructive hover:text-destructive-foreground"
+                className="text-destructive hover:bg-destructive hover:text-destructive-foreground w-full justify-start"
                 onClick={() => setDeleteOpen(true)}
               >
                 <Trash2 className="mr-2 h-4 w-4" />
@@ -336,8 +310,7 @@ export function CardModal({ card, boardId, open, onOpenChange }: CardModalProps)
           <AlertDialogHeader>
             <AlertDialogTitle>Delete card?</AlertDialogTitle>
             <AlertDialogDescription>
-              This will permanently delete this card. This action cannot be
-              undone.
+              This will permanently delete this card. This action cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

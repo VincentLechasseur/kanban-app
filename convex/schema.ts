@@ -47,11 +47,7 @@ export default defineSchema({
   joinRequests: defineTable({
     boardId: v.id("boards"),
     userId: v.id("users"),
-    status: v.union(
-      v.literal("pending"),
-      v.literal("accepted"),
-      v.literal("rejected")
-    ),
+    status: v.union(v.literal("pending"), v.literal("accepted"), v.literal("rejected")),
     message: v.optional(v.string()),
     createdAt: v.number(),
     resolvedAt: v.optional(v.number()),

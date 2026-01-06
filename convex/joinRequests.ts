@@ -25,10 +25,7 @@ export const request = mutation({
       .query("joinRequests")
       .withIndex("by_user", (q) => q.eq("userId", userId))
       .filter((q) =>
-        q.and(
-          q.eq(q.field("boardId"), args.boardId),
-          q.eq(q.field("status"), "pending")
-        )
+        q.and(q.eq(q.field("boardId"), args.boardId), q.eq(q.field("status"), "pending"))
       )
       .first();
 
@@ -73,9 +70,7 @@ export const listForBoard = query({
 
     const requests = await ctx.db
       .query("joinRequests")
-      .withIndex("by_board_status", (q) =>
-        q.eq("boardId", args.boardId).eq("status", "pending")
-      )
+      .withIndex("by_board_status", (q) => q.eq("boardId", args.boardId).eq("status", "pending"))
       .collect();
 
     // Get user details for each request
@@ -187,9 +182,7 @@ export const getPendingCount = query({
 
     const requests = await ctx.db
       .query("joinRequests")
-      .withIndex("by_board_status", (q) =>
-        q.eq("boardId", args.boardId).eq("status", "pending")
-      )
+      .withIndex("by_board_status", (q) => q.eq("boardId", args.boardId).eq("status", "pending"))
       .collect();
 
     return requests.length;
@@ -206,10 +199,7 @@ export const getUserRequestForBoard = query({
       .query("joinRequests")
       .withIndex("by_user", (q) => q.eq("userId", userId))
       .filter((q) =>
-        q.and(
-          q.eq(q.field("boardId"), args.boardId),
-          q.eq(q.field("status"), "pending")
-        )
+        q.and(q.eq(q.field("boardId"), args.boardId), q.eq(q.field("status"), "pending"))
       )
       .first();
   },
