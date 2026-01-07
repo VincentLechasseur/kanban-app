@@ -15,6 +15,12 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -27,6 +33,7 @@ import {
   CalendarIcon,
   Check,
   MessageSquare,
+  MoreHorizontal,
   Palette,
   Send,
   Tag,
@@ -372,9 +379,26 @@ export function CardModal({ card, boardId, open, onOpenChange }: CardModalProps)
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="max-h-[85vh] max-w-2xl overflow-y-auto">
-          <DialogHeader>
+        <DialogContent className="max-h-[90vh] max-w-3xl overflow-y-auto">
+          <DialogHeader className="flex flex-row items-center justify-between">
             <DialogTitle className="sr-only">Edit Card</DialogTitle>
+            {/* Options Menu */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon" className="ml-auto">
+                  <MoreHorizontal className="h-5 w-5" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem
+                  className="text-destructive focus:text-destructive"
+                  onClick={() => setDeleteOpen(true)}
+                >
+                  <Trash2 className="mr-2 h-4 w-4" />
+                  Delete card
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </DialogHeader>
 
           <div className="grid gap-6 md:grid-cols-[1fr,200px]">
@@ -401,7 +425,7 @@ export function CardModal({ card, boardId, open, onOpenChange }: CardModalProps)
                   onChange={(e) => setDescription(e.target.value)}
                   onBlur={handleSave}
                   placeholder="Add a more detailed description..."
-                  rows={6}
+                  rows={4}
                 />
               </div>
 
@@ -447,111 +471,6 @@ export function CardModal({ card, boardId, open, onOpenChange }: CardModalProps)
                   </div>
                 </div>
               )}
-
-              {/* Comments Section */}
-              <div className="space-y-3">
-                <div className="flex items-center gap-2">
-                  <MessageSquare className="h-4 w-4" />
-                  <Label>Comments</Label>
-                  {comments && comments.length > 0 && (
-                    <span className="text-muted-foreground text-xs">({comments.length})</span>
-                  )}
-                </div>
-
-                {/* Comments List */}
-                {comments && comments.length > 0 && (
-                  <div className="max-h-60 space-y-3 overflow-y-auto rounded-md border p-3">
-                    {comments.map((comment) => (
-                      <div key={comment._id} className="group flex gap-3">
-                        <UserAvatar
-                          userId={comment.user._id}
-                          name={comment.user.name}
-                          email={comment.user.email}
-                          image={comment.user.image}
-                          className="h-7 w-7 shrink-0"
-                          fallbackClassName="text-xs"
-                        />
-                        <div className="min-w-0 flex-1">
-                          <div className="flex items-center gap-2">
-                            <span className="text-sm font-medium">
-                              {comment.user.name ?? comment.user.email}
-                            </span>
-                            <span className="text-muted-foreground text-xs">
-                              {formatDistanceToNow(new Date(comment.createdAt), {
-                                addSuffix: true,
-                              })}
-                            </span>
-                            {comment.userId === currentUser?._id && (
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="text-muted-foreground hover:text-destructive ml-auto h-6 w-6 opacity-0 transition-opacity group-hover:opacity-100"
-                                onClick={() => handleDeleteComment(comment._id)}
-                              >
-                                <X className="h-3 w-3" />
-                              </Button>
-                            )}
-                          </div>
-                          <p className="text-sm">{renderCommentContent(comment.content)}</p>
-                        </div>
-                      </div>
-                    ))}
-                    <div ref={commentsEndRef} />
-                  </div>
-                )}
-
-                {/* Add Comment */}
-                {/* Mention suggestions - shown above input when active */}
-                {showMentions && mentionSuggestions.length > 0 && (
-                  <div className="bg-popover mb-2 max-h-40 overflow-y-auto rounded-md border p-1 shadow-md">
-                    <div className="text-muted-foreground px-2 py-1 text-xs font-semibold">
-                      Team Members
-                    </div>
-                    {mentionSuggestions.map((user, index) => (
-                      <button
-                        key={user._id}
-                        className={`flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-none ${
-                          index === selectedMentionIndex
-                            ? "bg-accent text-accent-foreground"
-                            : "hover:bg-accent hover:text-accent-foreground"
-                        }`}
-                        onClick={() => insertMention(user)}
-                      >
-                        <UserAvatar
-                          userId={user._id}
-                          name={user.name}
-                          email={user.email}
-                          image={user.image}
-                          className="h-5 w-5"
-                          fallbackClassName="text-xs"
-                        />
-                        <span>{user.name ?? user.email}</span>
-                        {user.name && (
-                          <span className="text-muted-foreground text-xs">{user.email}</span>
-                        )}
-                      </button>
-                    ))}
-                  </div>
-                )}
-
-                <div className="flex gap-2">
-                  <Input
-                    ref={commentInputRef}
-                    placeholder="Write a comment... (use @ to mention)"
-                    value={newComment}
-                    onChange={handleCommentInputChange}
-                    onKeyDown={handleCommentKeyDown}
-                    disabled={isSubmittingComment}
-                  />
-                  <Button
-                    size="icon"
-                    onClick={handleAddComment}
-                    disabled={!newComment.trim() || isSubmittingComment}
-                  >
-                    <Send className="h-4 w-4" />
-                  </Button>
-                </div>
-              </div>
             </div>
 
             {/* Sidebar Actions */}
@@ -692,19 +611,111 @@ export function CardModal({ card, boardId, open, onOpenChange }: CardModalProps)
                   </div>
                 </PopoverContent>
               </Popover>
+            </div>
+          </div>
 
-              <Separator className="my-4" />
+          {/* Comments Section - Full Width at Bottom */}
+          <Separator className="my-2" />
+          <div className="space-y-4">
+            <div className="flex items-center gap-2">
+              <MessageSquare className="h-4 w-4" />
+              <Label>Comments</Label>
+              {comments && comments.length > 0 && (
+                <span className="text-muted-foreground text-xs">({comments.length})</span>
+              )}
+            </div>
 
-              <p className="text-muted-foreground text-xs font-semibold uppercase">Actions</p>
+            {/* Comments List - No separate scroll */}
+            {comments && comments.length > 0 && (
+              <div className="space-y-4">
+                {comments.map((comment) => (
+                  <div key={comment._id} className="group flex gap-3">
+                    <UserAvatar
+                      userId={comment.user._id}
+                      name={comment.user.name}
+                      email={comment.user.email}
+                      image={comment.user.image}
+                      className="h-8 w-8 shrink-0"
+                      fallbackClassName="text-xs"
+                    />
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-medium">
+                          {comment.user.name ?? comment.user.email}
+                        </span>
+                        <span className="text-muted-foreground text-xs">
+                          {formatDistanceToNow(new Date(comment.createdAt), {
+                            addSuffix: true,
+                          })}
+                        </span>
+                        {comment.userId === currentUser?._id && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="text-muted-foreground hover:text-destructive ml-auto h-6 w-6 opacity-0 transition-opacity group-hover:opacity-100"
+                            onClick={() => handleDeleteComment(comment._id)}
+                          >
+                            <X className="h-3 w-3" />
+                          </Button>
+                        )}
+                      </div>
+                      <p className="text-sm">{renderCommentContent(comment.content)}</p>
+                    </div>
+                  </div>
+                ))}
+                <div ref={commentsEndRef} />
+              </div>
+            )}
 
+            {/* Add Comment */}
+            {/* Mention suggestions */}
+            {showMentions && mentionSuggestions.length > 0 && (
+              <div className="bg-popover mb-2 max-h-40 overflow-y-auto rounded-md border p-1 shadow-md">
+                <div className="text-muted-foreground px-2 py-1 text-xs font-semibold">
+                  Team Members
+                </div>
+                {mentionSuggestions.map((user, index) => (
+                  <button
+                    key={user._id}
+                    className={`flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-none ${
+                      index === selectedMentionIndex
+                        ? "bg-accent text-accent-foreground"
+                        : "hover:bg-accent hover:text-accent-foreground"
+                    }`}
+                    onClick={() => insertMention(user)}
+                  >
+                    <UserAvatar
+                      userId={user._id}
+                      name={user.name}
+                      email={user.email}
+                      image={user.image}
+                      className="h-5 w-5"
+                      fallbackClassName="text-xs"
+                    />
+                    <span>{user.name ?? user.email}</span>
+                    {user.name && (
+                      <span className="text-muted-foreground text-xs">{user.email}</span>
+                    )}
+                  </button>
+                ))}
+              </div>
+            )}
+
+            <div className="flex gap-2">
+              <Input
+                ref={commentInputRef}
+                placeholder="Write a comment... (use @ to mention)"
+                value={newComment}
+                onChange={handleCommentInputChange}
+                onKeyDown={handleCommentKeyDown}
+                disabled={isSubmittingComment}
+              />
               <Button
-                variant="secondary"
-                size="sm"
-                className="text-destructive hover:bg-destructive hover:text-destructive-foreground w-full justify-start"
-                onClick={() => setDeleteOpen(true)}
+                size="icon"
+                onClick={handleAddComment}
+                disabled={!newComment.trim() || isSubmittingComment}
               >
-                <Trash2 className="mr-2 h-4 w-4" />
-                Delete card
+                <Send className="h-4 w-4" />
               </Button>
             </div>
           </div>
