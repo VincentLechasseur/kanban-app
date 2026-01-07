@@ -18,16 +18,27 @@ export const list = query({
     const notificationsWithDetails = await Promise.all(
       notifications.map(async (notification) => {
         const fromUser = await ctx.db.get(notification.fromUserId);
-        const card = await ctx.db.get(notification.cardId);
         const board = await ctx.db.get(notification.boardId);
 
-        if (!fromUser || !card || !board) return null;
+        if (!fromUser || !board) return null;
 
         // Resolve profile image URL
         let fromUserImage: string | undefined = fromUser.image;
         if (fromUserImage?.startsWith("storage:")) {
           const storageId = fromUserImage.replace("storage:", "") as any;
           fromUserImage = (await ctx.storage.getUrl(storageId)) ?? undefined;
+        }
+
+        // Get card info if it's a card mention
+        let card = null;
+        if (notification.cardId) {
+          const cardDoc = await ctx.db.get(notification.cardId);
+          if (cardDoc) {
+            card = {
+              _id: cardDoc._id,
+              title: cardDoc.title,
+            };
+          }
         }
 
         return {
@@ -38,10 +49,7 @@ export const list = query({
             email: fromUser.email,
             image: fromUserImage,
           },
-          card: {
-            _id: card._id,
-            title: card.title,
-          },
+          card,
           board: {
             _id: board._id,
             name: board.name,
@@ -103,7 +111,24 @@ export const markAllAsRead = mutation({
   },
 });
 
-// Helper to create notification when someone is mentioned
+export const clearAll = mutation({
+  args: {},
+  handler: async (ctx) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) throw new Error("Not authenticated");
+
+    const all = await ctx.db
+      .query("notifications")
+      .withIndex("by_user", (q) => q.eq("userId", userId))
+      .collect();
+
+    for (const notification of all) {
+      await ctx.db.delete(notification._id);
+    }
+  },
+});
+
+// Helper to create notification when someone is mentioned in a card comment
 export const createMentionNotification = mutation({
   args: {
     mentionedUserId: v.id("users"),
@@ -133,6 +158,40 @@ export const createMentionNotification = mutation({
       cardId: args.cardId,
       boardId: args.boardId,
       commentId: args.commentId,
+      read: false,
+      createdAt: Date.now(),
+    });
+  },
+});
+
+// Helper to create notification when someone is mentioned in chat
+export const createChatMentionNotification = mutation({
+  args: {
+    mentionedUserId: v.id("users"),
+    boardId: v.id("boards"),
+    messageId: v.id("messages"),
+  },
+  handler: async (ctx, args) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) throw new Error("Not authenticated");
+
+    // Don't notify yourself
+    if (args.mentionedUserId === userId) return;
+
+    // Check if user is a member of the board
+    const board = await ctx.db.get(args.boardId);
+    if (!board) return;
+
+    if (board.ownerId !== args.mentionedUserId && !board.memberIds.includes(args.mentionedUserId)) {
+      return;
+    }
+
+    await ctx.db.insert("notifications", {
+      userId: args.mentionedUserId,
+      type: "chat_mention",
+      fromUserId: userId,
+      boardId: args.boardId,
+      messageId: args.messageId,
       read: false,
       createdAt: Date.now(),
     });

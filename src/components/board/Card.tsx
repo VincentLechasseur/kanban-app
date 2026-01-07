@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { useQuery } from "convex/react";
@@ -19,8 +20,20 @@ interface KanbanCardProps {
 
 export function KanbanCard({ card, boardId, isDragging }: KanbanCardProps) {
   const [modalOpen, setModalOpen] = useState(false);
+  const [searchParams, setSearchParams] = useSearchParams();
   const labels = useQuery(api.labels.list, { boardId });
   const assignees = useQuery(api.users.getMany, { ids: card.assigneeIds });
+
+  // Auto-open if URL param matches this card
+  useEffect(() => {
+    const cardParam = searchParams.get("card");
+    if (cardParam === card._id) {
+      setModalOpen(true);
+      // Clear the param after opening
+      searchParams.delete("card");
+      setSearchParams(searchParams, { replace: true });
+    }
+  }, [searchParams, setSearchParams, card._id]);
 
   const {
     attributes,

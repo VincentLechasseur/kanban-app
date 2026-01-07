@@ -83,11 +83,12 @@ export default defineSchema({
 
   notifications: defineTable({
     userId: v.id("users"),
-    type: v.union(v.literal("mention"), v.literal("assignment")),
+    type: v.union(v.literal("mention"), v.literal("chat_mention"), v.literal("assignment")),
     fromUserId: v.id("users"),
-    cardId: v.id("cards"),
+    cardId: v.optional(v.id("cards")),
     boardId: v.id("boards"),
     commentId: v.optional(v.id("comments")),
+    messageId: v.optional(v.id("messages")),
     read: v.boolean(),
     createdAt: v.number(),
   })

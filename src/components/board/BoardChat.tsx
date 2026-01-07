@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useMemo } from "react";
+import { useState, useRef, useEffect, useMemo, useCallback } from "react";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "../../../convex/_generated/api";
 import type { Doc, Id } from "../../../convex/_generated/dataModel";
@@ -31,6 +31,9 @@ export function BoardChat({ boardId, open, onOpenChange }: BoardChatProps) {
   const cards = useQuery(api.cards.listByBoard, { boardId });
   const sendMessage = useMutation(api.messages.send);
   const markAsRead = useMutation(api.messages.markAsRead);
+  const createChatMentionNotification = useMutation(
+    api.notifications.createChatMentionNotification
+  );
 
   const [content, setContent] = useState("");
   const [isSending, setIsSending] = useState(false);
@@ -79,12 +82,49 @@ export function BoardChat({ boardId, open, onOpenChange }: BoardChatProps) {
 
   const suggestions = mentionType === "user" ? userSuggestions : cardSuggestions;
 
+  // Parse user mentions from message content
+  const parseUserMentions = useCallback(
+    (text: string): Id<"users">[] => {
+      if (!members) return [];
+      const mentionRegex = /@\[([^\]]+)\]|@(\S+)/g;
+      const mentionedUserIds: Id<"users">[] = [];
+      let match;
+
+      while ((match = mentionRegex.exec(text)) !== null) {
+        const mentionName = match[1] || match[2];
+        const user = members.find(
+          (m) =>
+            m.name?.toLowerCase() === mentionName.toLowerCase() ||
+            m.email?.toLowerCase() === mentionName.toLowerCase()
+        );
+        if (user && !mentionedUserIds.includes(user._id)) {
+          mentionedUserIds.push(user._id);
+        }
+      }
+
+      return mentionedUserIds;
+    },
+    [members]
+  );
+
   const handleSend = async () => {
     if (!content.trim() || isSending) return;
 
     setIsSending(true);
     try {
-      await sendMessage({ boardId, content: content.trim() });
+      const messageContent = content.trim();
+      const messageId = await sendMessage({ boardId, content: messageContent });
+
+      // Create notifications for mentioned users
+      const mentionedUserIds = parseUserMentions(messageContent);
+      for (const mentionedUserId of mentionedUserIds) {
+        await createChatMentionNotification({
+          mentionedUserId,
+          boardId,
+          messageId,
+        });
+      }
+
       setContent("");
       setMentionType(null);
       // Keep focus on input after sending

@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useQuery, useMutation } from "convex/react";
 import { useNavigate } from "react-router-dom";
 import { formatDistanceToNow } from "date-fns";
@@ -6,25 +7,41 @@ import { UserAvatar } from "@/components/UserAvatar";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Bell, CheckCheck } from "lucide-react";
+import { Separator } from "@/components/ui/separator";
+import { Bell, CheckCheck, MessageSquare, MessageCircle, Trash2 } from "lucide-react";
 
 export function Notifications() {
   const navigate = useNavigate();
+  const [open, setOpen] = useState(false);
   const notifications = useQuery(api.notifications.list);
   const unreadCount = useQuery(api.notifications.getUnreadCount);
   const markAsRead = useMutation(api.notifications.markAsRead);
   const markAllAsRead = useMutation(api.notifications.markAllAsRead);
+  const clearAll = useMutation(api.notifications.clearAll);
 
   const handleNotificationClick = async (notification: NonNullable<typeof notifications>[0]) => {
     if (!notification.read) {
       await markAsRead({ id: notification._id });
     }
-    // Navigate to the board/card
-    navigate(`/board/${notification.boardId}`);
+
+    setOpen(false);
+
+    // Navigate to the board with query params to open the card or chat
+    if (notification.type === "chat_mention") {
+      navigate(`/board/${notification.boardId}?chat=true`);
+    } else if (notification.type === "mention" && notification.card) {
+      navigate(`/board/${notification.boardId}?card=${notification.card._id}`);
+    } else {
+      navigate(`/board/${notification.boardId}`);
+    }
+  };
+
+  const handleClearAll = async () => {
+    await clearAll();
   };
 
   return (
-    <Popover>
+    <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
         <Button variant="ghost" size="icon" className="relative">
           <Bell className="h-5 w-5" />
@@ -71,21 +88,37 @@ export function Notifications() {
                   }`}
                   onClick={() => handleNotificationClick(notification)}
                 >
-                  <UserAvatar
-                    userId={notification.fromUser._id}
-                    name={notification.fromUser.name}
-                    email={notification.fromUser.email}
-                    image={notification.fromUser.image}
-                    className="h-8 w-8 shrink-0"
-                    fallbackClassName="text-xs"
-                  />
+                  <div className="relative">
+                    <UserAvatar
+                      userId={notification.fromUser._id}
+                      name={notification.fromUser.name}
+                      email={notification.fromUser.email}
+                      image={notification.fromUser.image}
+                      className="h-8 w-8 shrink-0"
+                      fallbackClassName="text-xs"
+                    />
+                    {/* Icon badge to indicate notification type */}
+                    <div className="bg-background absolute -right-1 -bottom-1 rounded-full p-0.5">
+                      {notification.type === "chat_mention" ? (
+                        <MessageCircle className="h-3 w-3 text-blue-500" />
+                      ) : (
+                        <MessageSquare className="h-3 w-3 text-green-500" />
+                      )}
+                    </div>
+                  </div>
                   <div className="min-w-0 flex-1">
                     <p className="text-sm">
                       <span className="font-medium">
                         {notification.fromUser.name ?? notification.fromUser.email}
                       </span>{" "}
-                      mentioned you in{" "}
-                      <span className="font-medium">{notification.card.title}</span>
+                      {notification.type === "chat_mention" ? (
+                        <>mentioned you in chat</>
+                      ) : (
+                        <>
+                          mentioned you in{" "}
+                          <span className="font-medium">{notification.card?.title}</span>
+                        </>
+                      )}
                     </p>
                     <p className="text-muted-foreground mt-0.5 text-xs">
                       {notification.board.name} •{" "}
@@ -100,6 +133,24 @@ export function Notifications() {
             </div>
           )}
         </ScrollArea>
+
+        {/* Clear All Button */}
+        {notifications && notifications.length > 0 && (
+          <>
+            <Separator />
+            <div className="p-2">
+              <Button
+                variant="ghost"
+                size="sm"
+                className="text-muted-foreground hover:text-destructive w-full text-xs"
+                onClick={handleClearAll}
+              >
+                <Trash2 className="mr-1 h-3 w-3" />
+                Clear all notifications
+              </Button>
+            </div>
+          </>
+        )}
       </PopoverContent>
     </Popover>
   );

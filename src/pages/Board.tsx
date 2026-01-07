@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import type { Id } from "../../convex/_generated/dataModel";
@@ -84,9 +84,23 @@ export function BoardPage() {
   const [icon, setIcon] = useState("");
   const [isUpdating, setIsUpdating] = useState(false);
 
+  // URL search params for opening chat/card from notifications
+  const [searchParams, setSearchParams] = useSearchParams();
+
   // Filter state
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedAssigneeIds, setSelectedAssigneeIds] = useState<Set<Id<"users">>>(new Set());
+
+  // Handle URL params for opening chat from notifications
+  useEffect(() => {
+    const shouldOpenChat = searchParams.get("chat") === "true";
+    if (shouldOpenChat && board) {
+      setChatOpen(true);
+      // Clear the param after opening
+      searchParams.delete("chat");
+      setSearchParams(searchParams, { replace: true });
+    }
+  }, [searchParams, setSearchParams, board]);
 
   const toggleAssigneeFilter = (userId: Id<"users">) => {
     setSelectedAssigneeIds((prev) => {
