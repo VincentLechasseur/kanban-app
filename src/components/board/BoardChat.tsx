@@ -85,13 +85,32 @@ export function BoardChat({ boardId, open, onOpenChange }: BoardChatProps) {
   // Parse user mentions from message content
   const parseUserMentions = useCallback(
     (text: string): Id<"users">[] => {
-      if (!members) return [];
-      const mentionRegex = /@\[([^\]]+)\]|@(\S+)/g;
-      const mentionedUserIds: Id<"users">[] = [];
-      let match;
+      if (!members || members.length === 0) return [];
 
-      while ((match = mentionRegex.exec(text)) !== null) {
-        const mentionName = match[1] || match[2];
+      const mentionedUserIds: Id<"users">[] = [];
+
+      // Match @[Name With Spaces] or @name patterns
+      const bracketMentionRegex = /@\[([^\]]+)\]/g;
+      const simpleMentionRegex = /@(\S+)/g;
+
+      // First, extract bracket mentions
+      let match;
+      while ((match = bracketMentionRegex.exec(text)) !== null) {
+        const mentionName = match[1].trim();
+        const user = members.find(
+          (m) =>
+            m.name?.toLowerCase() === mentionName.toLowerCase() ||
+            m.email?.toLowerCase() === mentionName.toLowerCase()
+        );
+        if (user && !mentionedUserIds.includes(user._id)) {
+          mentionedUserIds.push(user._id);
+        }
+      }
+
+      // Then, extract simple mentions (but skip those already in brackets)
+      const textWithoutBrackets = text.replace(/@\[[^\]]+\]/g, "");
+      while ((match = simpleMentionRegex.exec(textWithoutBrackets)) !== null) {
+        const mentionName = match[1].trim();
         const user = members.find(
           (m) =>
             m.name?.toLowerCase() === mentionName.toLowerCase() ||

@@ -380,25 +380,27 @@ export function CardModal({ card, boardId, open, onOpenChange }: CardModalProps)
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent className="max-h-[90vh] max-w-3xl overflow-y-auto">
-          {/* Custom header with options menu */}
-          <div className="absolute top-4 right-12">
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon" className="h-8 w-8">
-                  <MoreHorizontal className="h-4 w-4" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem
-                  className="text-destructive focus:text-destructive"
-                  onClick={() => setDeleteOpen(true)}
-                >
-                  <Trash2 className="mr-2 h-4 w-4" />
-                  Delete card
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
+          {/* Custom header with options menu - positioned next to close button */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="ring-offset-background absolute top-4 right-12 h-6 w-6 rounded-xs opacity-70 transition-opacity hover:opacity-100"
+              >
+                <MoreHorizontal className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem
+                className="text-destructive focus:text-destructive"
+                onClick={() => setDeleteOpen(true)}
+              >
+                <Trash2 className="mr-2 h-4 w-4" />
+                Delete card
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
           <DialogHeader className="sr-only">
             <DialogTitle>Edit Card</DialogTitle>
           </DialogHeader>

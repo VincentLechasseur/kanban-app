@@ -6,7 +6,6 @@ import { api } from "../../convex/_generated/api";
 import { UserAvatar } from "@/components/UserAvatar";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { Bell, CheckCheck, MessageSquare, MessageCircle, Trash2 } from "lucide-react";
 
 export function Notifications() {
@@ -51,8 +50,8 @@ export function Notifications() {
           )}
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="flex h-96 w-80 flex-col p-0" align="end">
-        <div className="flex shrink-0 items-center justify-between border-b px-4 py-3">
+      <PopoverContent className="w-80 p-0" align="end">
+        <div className="flex items-center justify-between border-b px-4 py-3">
           <h3 className="font-semibold">Notifications</h3>
           {unreadCount !== undefined && unreadCount > 0 && (
             <Button
@@ -67,7 +66,7 @@ export function Notifications() {
           )}
         </div>
 
-        <ScrollArea className="flex-1">
+        <div className="max-h-72 overflow-y-auto">
           {notifications === undefined ? (
             <div className="flex items-center justify-center py-8">
               <div className="border-primary h-5 w-5 animate-spin rounded-full border-2 border-t-transparent" />
@@ -131,11 +130,11 @@ export function Notifications() {
               ))}
             </div>
           )}
-        </ScrollArea>
+        </div>
 
-        {/* Clear All Button */}
+        {/* Clear All Button - Always visible at bottom */}
         {notifications && notifications.length > 0 && (
-          <div className="shrink-0 border-t p-2">
+          <div className="border-t p-2">
             <Button
               variant="ghost"
               size="sm"
