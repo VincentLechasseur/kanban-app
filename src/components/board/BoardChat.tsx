@@ -111,26 +111,31 @@ export function BoardChat({ boardId, open, onOpenChange }: BoardChatProps) {
     if (!content.trim() || isSending) return;
 
     setIsSending(true);
+    const messageContent = content.trim();
+
     try {
-      const messageContent = content.trim();
       const messageId = await sendMessage({ boardId, content: messageContent });
 
       // Create notifications for mentioned users
       const mentionedUserIds = parseUserMentions(messageContent);
       for (const mentionedUserId of mentionedUserIds) {
-        await createChatMentionNotification({
-          mentionedUserId,
-          boardId,
-          messageId,
-        });
+        try {
+          await createChatMentionNotification({
+            mentionedUserId,
+            boardId,
+            messageId,
+          });
+        } catch (notifError) {
+          console.error("Failed to create notification:", notifError);
+        }
       }
 
       setContent("");
       setMentionType(null);
       // Keep focus on input after sending
       inputRef.current?.focus();
-    } catch {
-      // Error handling
+    } catch (error) {
+      console.error("Failed to send message:", error);
     } finally {
       setIsSending(false);
     }

@@ -380,6 +380,25 @@ export function CardModal({ card, boardId, open, onOpenChange }: CardModalProps)
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent className="max-h-[90vh] max-w-3xl overflow-y-auto">
+          {/* Custom header with options menu */}
+          <div className="absolute top-4 right-12">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon" className="h-8 w-8">
+                  <MoreHorizontal className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem
+                  className="text-destructive focus:text-destructive"
+                  onClick={() => setDeleteOpen(true)}
+                >
+                  <Trash2 className="mr-2 h-4 w-4" />
+                  Delete card
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
           <DialogHeader className="sr-only">
             <DialogTitle>Edit Card</DialogTitle>
           </DialogHeader>
@@ -387,27 +406,9 @@ export function CardModal({ card, boardId, open, onOpenChange }: CardModalProps)
           <div className="grid gap-6 md:grid-cols-[1fr,200px]">
             {/* Main Content */}
             <div className="space-y-4">
-              {/* Title with Options Menu */}
+              {/* Title */}
               <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <Label htmlFor="card-title">Title</Label>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="sm" className="h-7 w-7 p-0">
-                        <MoreHorizontal className="h-4 w-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuItem
-                        className="text-destructive focus:text-destructive"
-                        onClick={() => setDeleteOpen(true)}
-                      >
-                        <Trash2 className="mr-2 h-4 w-4" />
-                        Delete card
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </div>
+                <Label htmlFor="card-title">Title</Label>
                 <Input
                   id="card-title"
                   value={title}
