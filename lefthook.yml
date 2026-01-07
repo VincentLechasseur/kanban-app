@@ -13,10 +13,9 @@ pre-commit:
       run: bun run typecheck
 
 pre-push:
-  parallel: true
   jobs:
     - name: build
       run: bun run build
 
-    - name: convex-deploy
-      run: bunx convex deploy --yes
+# Note: Convex deploy is handled by GitHub Actions (see .github/workflows/deploy.yml)
+# Running it as a pre-push hook causes SSH connection timeouts

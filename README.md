@@ -210,17 +210,25 @@ Convex backend and frontend are deployed separately:
 
 **Important:** Schema changes (new tables, fields, indexes) require deploying Convex to production. If you only push to Vercel, your frontend will try to use tables/functions that don't exist in production yet.
 
-### Auto-deploy on Push
+### Auto-deploy with GitHub Actions
 
-This project includes a pre-push hook that automatically deploys Convex:
+This project uses GitHub Actions to automatically deploy Convex on push to main:
 
 ```yaml
-# lefthook.yml
-pre-push:
-  jobs:
-    - name: convex-deploy
-      run: bunx convex deploy --yes
+# .github/workflows/deploy.yml
+- name: Deploy to Convex
+  run: bunx convex deploy --yes
+  env:
+    CONVEX_DEPLOY_KEY: ${{ secrets.CONVEX_DEPLOY_KEY }}
 ```
+
+**Setup:** Add your Convex deploy key to GitHub Secrets:
+
+1. Go to [Convex Dashboard](https://dashboard.convex.dev/) > Your Project > Settings > Deploy Keys
+2. Create a new deploy key
+3. Add it to GitHub: Repository Settings > Secrets > Actions > New secret
+   - Name: `CONVEX_DEPLOY_KEY`
+   - Value: Your deploy key
 
 This ensures your Convex backend is always in sync with your frontend.
 
