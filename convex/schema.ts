@@ -80,4 +80,17 @@ export default defineSchema({
   })
     .index("by_board_user", ["boardId", "userId"])
     .index("by_user", ["userId"]),
+
+  notifications: defineTable({
+    userId: v.id("users"),
+    type: v.union(v.literal("mention"), v.literal("assignment")),
+    fromUserId: v.id("users"),
+    cardId: v.id("cards"),
+    boardId: v.id("boards"),
+    commentId: v.optional(v.id("comments")),
+    read: v.boolean(),
+    createdAt: v.number(),
+  })
+    .index("by_user", ["userId", "createdAt"])
+    .index("by_user_unread", ["userId", "read"]),
 });

@@ -17,6 +17,7 @@ import type * as http from "../http.js";
 import type * as joinRequests from "../joinRequests.js";
 import type * as labels from "../labels.js";
 import type * as messages from "../messages.js";
+import type * as notifications from "../notifications.js";
 import type * as users from "../users.js";
 
 import type {
@@ -35,6 +36,7 @@ declare const fullApi: ApiFromModules<{
   joinRequests: typeof joinRequests;
   labels: typeof labels;
   messages: typeof messages;
+  notifications: typeof notifications;
   users: typeof users;
 }>;
 

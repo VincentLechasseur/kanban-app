@@ -3,6 +3,7 @@ import { useQuery } from "convex/react";
 import { useNavigate } from "react-router-dom";
 import { api } from "../../../convex/_generated/api";
 import { UserAvatar } from "@/components/UserAvatar";
+import { Notifications } from "@/components/Notifications";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -59,6 +60,8 @@ export function Header({ onMenuClick }: HeaderProps) {
         >
           {isDark ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
         </Button>
+
+        <Notifications />
 
         <DropdownMenu>
           <DropdownMenuTrigger asChild>

@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useMemo, useCallback } from "react";
 import { useQuery, useMutation } from "convex/react";
 import { format, formatDistanceToNow } from "date-fns";
 import { api } from "../../../convex/_generated/api";
@@ -66,6 +66,7 @@ export function CardModal({ card, boardId, open, onOpenChange }: CardModalProps)
   const setAssignees = useMutation(api.cards.setAssignees);
   const addComment = useMutation(api.comments.add);
   const removeComment = useMutation(api.comments.remove);
+  const createMentionNotification = useMutation(api.notifications.createMentionNotification);
 
   const [title, setTitle] = useState(card.title);
   const [description, setDescription] = useState(card.description ?? "");
@@ -76,7 +77,23 @@ export function CardModal({ card, boardId, open, onOpenChange }: CardModalProps)
   const [colorOpen, setColorOpen] = useState(false);
   const [newComment, setNewComment] = useState("");
   const [isSubmittingComment, setIsSubmittingComment] = useState(false);
+  const [mentionSearch, setMentionSearch] = useState("");
+  const [showMentions, setShowMentions] = useState(false);
+  const [selectedMentionIndex, setSelectedMentionIndex] = useState(0);
   const commentsEndRef = useRef<HTMLDivElement>(null);
+  const commentInputRef = useRef<HTMLInputElement>(null);
+
+  // Track original values for change detection
+  const originalTitle = useRef(card.title);
+  const originalDescription = useRef(card.description ?? "");
+
+  // Update original values when card changes
+  useEffect(() => {
+    originalTitle.current = card.title;
+    originalDescription.current = card.description ?? "";
+    setTitle(card.title);
+    setDescription(card.description ?? "");
+  }, [card._id, card.title, card.description]);
 
   // Scroll to bottom when new comments arrive
   useEffect(() => {
@@ -85,16 +102,156 @@ export function CardModal({ card, boardId, open, onOpenChange }: CardModalProps)
     }
   }, [comments?.length, open]);
 
+  // Filter members for mention suggestions (exclude current user)
+  const mentionSuggestions = useMemo(() => {
+    if (!showMentions || !members || !currentUser) return [];
+    const search = mentionSearch.toLowerCase();
+    return members.filter(
+      (m) =>
+        m._id !== currentUser._id &&
+        (m.name?.toLowerCase().includes(search) || m.email?.toLowerCase().includes(search))
+    );
+  }, [members, mentionSearch, showMentions, currentUser]);
+
+  // Reset selected index when suggestions change
+  useEffect(() => {
+    setSelectedMentionIndex(0);
+  }, [mentionSearch]);
+
+  // Parse mentions from comment text
+  const parseMentions = useCallback(
+    (text: string): Id<"users">[] => {
+      if (!members) return [];
+      const mentionRegex = /@\[([^\]]+)\]|@(\S+)/g;
+      const mentionedUserIds: Id<"users">[] = [];
+      let match;
+
+      while ((match = mentionRegex.exec(text)) !== null) {
+        const mentionName = match[1] || match[2];
+        const user = members.find(
+          (m) =>
+            m.name?.toLowerCase() === mentionName.toLowerCase() ||
+            m.email?.toLowerCase() === mentionName.toLowerCase()
+        );
+        if (user && !mentionedUserIds.includes(user._id)) {
+          mentionedUserIds.push(user._id);
+        }
+      }
+
+      return mentionedUserIds;
+    },
+    [members]
+  );
+
   const handleAddComment = async () => {
     if (!newComment.trim() || isSubmittingComment) return;
     setIsSubmittingComment(true);
     try {
-      await addComment({ cardId: card._id, content: newComment.trim() });
+      const commentContent = newComment.trim();
+      const commentId = await addComment({ cardId: card._id, content: commentContent });
+
+      // Create notifications for mentioned users
+      const mentionedUserIds = parseMentions(commentContent);
+      for (const mentionedUserId of mentionedUserIds) {
+        await createMentionNotification({
+          mentionedUserId,
+          cardId: card._id,
+          boardId,
+          commentId,
+        });
+      }
+
       setNewComment("");
+      setShowMentions(false);
     } catch {
       toast.error("Failed to add comment");
     } finally {
       setIsSubmittingComment(false);
+    }
+  };
+
+  const handleCommentInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setNewComment(value);
+
+    // Detect @ mention trigger
+    const cursorPos = e.target.selectionStart ?? value.length;
+    const textBeforeCursor = value.slice(0, cursorPos);
+
+    // Check for bracket syntax: @[
+    const lastAtBracket = textBeforeCursor.lastIndexOf("@[");
+    if (lastAtBracket !== -1 && !textBeforeCursor.slice(lastAtBracket).includes("]")) {
+      setShowMentions(true);
+      setMentionSearch(textBeforeCursor.slice(lastAtBracket + 2));
+      return;
+    }
+
+    // Check for simple @ mention
+    const lastAtIndex = textBeforeCursor.lastIndexOf("@");
+    if (lastAtIndex !== -1 && !textBeforeCursor.slice(lastAtIndex).includes(" ")) {
+      setShowMentions(true);
+      setMentionSearch(textBeforeCursor.slice(lastAtIndex + 1));
+    } else {
+      setShowMentions(false);
+      setMentionSearch("");
+    }
+  };
+
+  const insertMention = (user: { name?: string; email?: string }) => {
+    const displayName = user.name ?? user.email ?? "";
+    const cursorPos = commentInputRef.current?.selectionStart ?? newComment.length;
+    const textBeforeCursor = newComment.slice(0, cursorPos);
+
+    // Find where the mention started
+    const bracketIndex = textBeforeCursor.lastIndexOf("@[");
+    const simpleIndex = textBeforeCursor.lastIndexOf("@");
+    const inBracketMode =
+      bracketIndex !== -1 && !textBeforeCursor.slice(bracketIndex).includes("]");
+
+    const needsBrackets = displayName.includes(" ") || inBracketMode;
+
+    if (inBracketMode) {
+      const beforeTrigger = newComment.slice(0, bracketIndex);
+      const afterCursor = newComment.slice(cursorPos);
+      setNewComment(`${beforeTrigger}@[${displayName}] ${afterCursor}`);
+    } else if (simpleIndex !== -1) {
+      const beforeTrigger = newComment.slice(0, simpleIndex);
+      const afterCursor = newComment.slice(cursorPos);
+      if (needsBrackets) {
+        setNewComment(`${beforeTrigger}@[${displayName}] ${afterCursor}`);
+      } else {
+        setNewComment(`${beforeTrigger}@${displayName} ${afterCursor}`);
+      }
+    }
+
+    setShowMentions(false);
+    setMentionSearch("");
+    commentInputRef.current?.focus();
+  };
+
+  const handleCommentKeyDown = (e: React.KeyboardEvent) => {
+    if (showMentions && mentionSuggestions.length > 0) {
+      if (e.key === "ArrowDown") {
+        e.preventDefault();
+        setSelectedMentionIndex((prev) => (prev + 1) % mentionSuggestions.length);
+      } else if (e.key === "ArrowUp") {
+        e.preventDefault();
+        setSelectedMentionIndex(
+          (prev) => (prev - 1 + mentionSuggestions.length) % mentionSuggestions.length
+        );
+      } else if (e.key === "Enter" || e.key === "Tab") {
+        e.preventDefault();
+        const selected = mentionSuggestions[selectedMentionIndex];
+        if (selected) {
+          insertMention(selected);
+        }
+      } else if (e.key === "Escape") {
+        setShowMentions(false);
+        setMentionSearch("");
+      }
+    } else if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      handleAddComment();
     }
   };
 
@@ -108,16 +265,50 @@ export function CardModal({ card, boardId, open, onOpenChange }: CardModalProps)
 
   const handleSave = async () => {
     if (!title.trim()) return;
+
+    const trimmedTitle = title.trim();
+    const trimmedDescription = description.trim() || undefined;
+
+    // Only save if there are actual changes
+    const titleChanged = trimmedTitle !== originalTitle.current;
+    const descriptionChanged = (trimmedDescription ?? "") !== originalDescription.current;
+
+    if (!titleChanged && !descriptionChanged) {
+      return; // No changes, skip save
+    }
+
     try {
       await updateCard({
         id: card._id,
-        title: title.trim(),
-        description: description.trim() || undefined,
+        title: trimmedTitle,
+        description: trimmedDescription,
       });
+
+      // Update original values after successful save
+      originalTitle.current = trimmedTitle;
+      originalDescription.current = trimmedDescription ?? "";
+
       toast.success("Card updated");
     } catch {
       toast.error("Failed to update card");
     }
+  };
+
+  // Render comment content with highlighted mentions
+  const renderCommentContent = (text: string) => {
+    const mentionRegex = /(@\[[^\]]+\]|@\S+)/g;
+    const parts = text.split(mentionRegex);
+
+    return parts.map((part, i) => {
+      if (part.startsWith("@[") || part.startsWith("@")) {
+        return (
+          <span key={i} className="text-primary font-semibold">
+            {part}
+          </span>
+        );
+      }
+      return part;
+    });
   };
 
   const handleDelete = async () => {
@@ -182,315 +373,353 @@ export function CardModal({ card, boardId, open, onOpenChange }: CardModalProps)
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="max-w-2xl">
-          <DialogHeader>
+        <DialogContent className="flex max-h-[85vh] max-w-2xl flex-col overflow-hidden">
+          <DialogHeader className="shrink-0">
             <DialogTitle className="sr-only">Edit Card</DialogTitle>
           </DialogHeader>
 
-          <div className="grid gap-6 md:grid-cols-[1fr,200px]">
-            {/* Main Content */}
-            <div className="space-y-4">
-              {/* Title */}
-              <div className="space-y-2">
-                <Label htmlFor="card-title">Title</Label>
-                <Input
-                  id="card-title"
-                  value={title}
-                  onChange={(e) => setTitle(e.target.value)}
-                  onBlur={handleSave}
-                  className="text-lg font-medium"
-                />
-              </div>
-
-              {/* Description */}
-              <div className="space-y-2">
-                <Label htmlFor="card-description">Description</Label>
-                <Textarea
-                  id="card-description"
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                  onBlur={handleSave}
-                  placeholder="Add a more detailed description..."
-                  rows={6}
-                />
-              </div>
-
-              {/* Labels Display */}
-              {cardLabels.length > 0 && (
+          <ScrollArea className="flex-1 pr-4">
+            <div className="grid gap-6 md:grid-cols-[1fr,200px]">
+              {/* Main Content */}
+              <div className="space-y-4">
+                {/* Title */}
                 <div className="space-y-2">
-                  <Label>Labels</Label>
-                  <div className="flex flex-wrap gap-2">
-                    {cardLabels.map((label) => (
-                      <Badge
-                        key={label._id}
-                        style={{ backgroundColor: label.color }}
-                        className="text-white"
-                      >
-                        {label.name}
-                      </Badge>
-                    ))}
-                  </div>
+                  <Label htmlFor="card-title">Title</Label>
+                  <Input
+                    id="card-title"
+                    value={title}
+                    onChange={(e) => setTitle(e.target.value)}
+                    onBlur={handleSave}
+                    className="text-lg font-medium"
+                  />
                 </div>
-              )}
 
-              {/* Assignees Display */}
-              {cardAssignees.length > 0 && (
+                {/* Description */}
                 <div className="space-y-2">
-                  <Label>Assignees</Label>
-                  <div className="flex flex-wrap gap-2">
-                    {cardAssignees.map((user) => (
-                      <div
-                        key={user._id}
-                        className="bg-muted flex items-center gap-2 rounded-full px-2 py-1"
-                      >
-                        <UserAvatar
-                          userId={user._id}
-                          name={user.name}
-                          email={user.email}
-                          image={user.image}
-                          className="h-5 w-5"
-                          fallbackClassName="text-xs"
-                        />
-                        <span className="text-sm">{user.name ?? user.email}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Comments Section */}
-              <div className="space-y-3">
-                <div className="flex items-center gap-2">
-                  <MessageSquare className="h-4 w-4" />
-                  <Label>Comments</Label>
-                  {comments && comments.length > 0 && (
-                    <span className="text-muted-foreground text-xs">({comments.length})</span>
-                  )}
+                  <Label htmlFor="card-description">Description</Label>
+                  <Textarea
+                    id="card-description"
+                    value={description}
+                    onChange={(e) => setDescription(e.target.value)}
+                    onBlur={handleSave}
+                    placeholder="Add a more detailed description..."
+                    rows={6}
+                  />
                 </div>
 
-                {/* Comments List */}
-                {comments && comments.length > 0 && (
-                  <ScrollArea className="max-h-48">
-                    <div className="space-y-3 pr-4">
-                      {comments.map((comment) => (
-                        <div key={comment._id} className="group flex gap-3">
-                          <UserAvatar
-                            userId={comment.user._id}
-                            name={comment.user.name}
-                            email={comment.user.email}
-                            image={comment.user.image}
-                            className="h-7 w-7 shrink-0"
-                            fallbackClassName="text-xs"
-                          />
-                          <div className="min-w-0 flex-1">
-                            <div className="flex items-center gap-2">
-                              <span className="text-sm font-medium">
-                                {comment.user.name ?? comment.user.email}
-                              </span>
-                              <span className="text-muted-foreground text-xs">
-                                {formatDistanceToNow(new Date(comment.createdAt), {
-                                  addSuffix: true,
-                                })}
-                              </span>
-                              {comment.userId === currentUser?._id && (
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  className="text-muted-foreground hover:text-destructive ml-auto h-6 w-6 opacity-0 transition-opacity group-hover:opacity-100"
-                                  onClick={() => handleDeleteComment(comment._id)}
-                                >
-                                  <X className="h-3 w-3" />
-                                </Button>
-                              )}
-                            </div>
-                            <p className="text-sm">{comment.content}</p>
-                          </div>
-                        </div>
+                {/* Labels Display */}
+                {cardLabels.length > 0 && (
+                  <div className="space-y-2">
+                    <Label>Labels</Label>
+                    <div className="flex flex-wrap gap-2">
+                      {cardLabels.map((label) => (
+                        <Badge
+                          key={label._id}
+                          style={{ backgroundColor: label.color }}
+                          className="text-white"
+                        >
+                          {label.name}
+                        </Badge>
                       ))}
-                      <div ref={commentsEndRef} />
                     </div>
-                  </ScrollArea>
+                  </div>
                 )}
 
-                {/* Add Comment */}
-                <div className="flex gap-2">
-                  <Input
-                    placeholder="Write a comment..."
-                    value={newComment}
-                    onChange={(e) => setNewComment(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter" && !e.shiftKey) {
-                        e.preventDefault();
-                        handleAddComment();
-                      }
-                    }}
-                    disabled={isSubmittingComment}
-                  />
-                  <Button
-                    size="icon"
-                    onClick={handleAddComment}
-                    disabled={!newComment.trim() || isSubmittingComment}
-                  >
-                    <Send className="h-4 w-4" />
-                  </Button>
-                </div>
-              </div>
-            </div>
-
-            {/* Sidebar Actions */}
-            <div className="space-y-3">
-              <p className="text-muted-foreground text-xs font-semibold uppercase">Add to card</p>
-
-              {/* Labels */}
-              <Popover open={labelsOpen} onOpenChange={setLabelsOpen}>
-                <PopoverTrigger asChild>
-                  <Button variant="secondary" size="sm" className="w-full justify-start">
-                    <Tag className="mr-2 h-4 w-4" />
-                    Labels
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-64" align="start">
+                {/* Assignees Display */}
+                {cardAssignees.length > 0 && (
                   <div className="space-y-2">
-                    <p className="text-sm font-medium">Labels</p>
-                    {labels?.map((label) => (
-                      <button
-                        key={label._id}
-                        className="hover:bg-muted flex w-full items-center gap-2 rounded p-2"
-                        onClick={() => handleToggleLabel(label._id)}
-                      >
+                    <Label>Assignees</Label>
+                    <div className="flex flex-wrap gap-2">
+                      {cardAssignees.map((user) => (
                         <div
-                          className="h-6 flex-1 rounded"
-                          style={{ backgroundColor: label.color }}
-                        />
-                        <span className="text-sm">{label.name}</span>
-                        {card.labelIds.includes(label._id) && <Check className="h-4 w-4" />}
-                      </button>
-                    ))}
+                          key={user._id}
+                          className="bg-muted flex items-center gap-2 rounded-full px-2 py-1"
+                        >
+                          <UserAvatar
+                            userId={user._id}
+                            name={user.name}
+                            email={user.email}
+                            image={user.image}
+                            className="h-5 w-5"
+                            fallbackClassName="text-xs"
+                          />
+                          <span className="text-sm">{user.name ?? user.email}</span>
+                        </div>
+                      ))}
+                    </div>
                   </div>
-                </PopoverContent>
-              </Popover>
+                )}
 
-              {/* Assignees */}
-              <Popover open={assigneesOpen} onOpenChange={setAssigneesOpen}>
-                <PopoverTrigger asChild>
-                  <Button variant="secondary" size="sm" className="w-full justify-start">
-                    <User className="mr-2 h-4 w-4" />
-                    Assignees
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-64" align="start">
-                  <div className="space-y-2">
-                    <p className="text-sm font-medium">Members</p>
-                    {members?.map((user) => (
-                      <button
-                        key={user._id}
-                        className="hover:bg-muted flex w-full items-center gap-2 rounded p-2"
-                        onClick={() => handleToggleAssignee(user._id)}
-                      >
-                        <UserAvatar
-                          userId={user._id}
-                          name={user.name}
-                          email={user.email}
-                          image={user.image}
-                          className="h-6 w-6"
-                          fallbackClassName="text-xs"
-                        />
-                        <span className="flex-1 text-left text-sm">{user.name ?? user.email}</span>
-                        {card.assigneeIds.includes(user._id) && <Check className="h-4 w-4" />}
-                      </button>
-                    ))}
+                {/* Comments Section */}
+                <div className="space-y-3">
+                  <div className="flex items-center gap-2">
+                    <MessageSquare className="h-4 w-4" />
+                    <Label>Comments</Label>
+                    {comments && comments.length > 0 && (
+                      <span className="text-muted-foreground text-xs">({comments.length})</span>
+                    )}
                   </div>
-                </PopoverContent>
-              </Popover>
 
-              {/* Due Date */}
-              <Popover open={dateOpen} onOpenChange={setDateOpen}>
-                <PopoverTrigger asChild>
-                  <Button variant="secondary" size="sm" className="w-full justify-start">
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    {card.dueDate ? format(new Date(card.dueDate), "MMM d, yyyy") : "Due date"}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="start">
-                  <Calendar
-                    mode="single"
-                    selected={card.dueDate ? new Date(card.dueDate) : undefined}
-                    onSelect={handleSetDueDate}
-                    initialFocus
-                  />
-                  {card.dueDate && (
-                    <div className="border-t p-2">
+                  {/* Comments List */}
+                  {comments && comments.length > 0 && (
+                    <ScrollArea className="max-h-48">
+                      <div className="space-y-3 pr-4">
+                        {comments.map((comment) => (
+                          <div key={comment._id} className="group flex gap-3">
+                            <UserAvatar
+                              userId={comment.user._id}
+                              name={comment.user.name}
+                              email={comment.user.email}
+                              image={comment.user.image}
+                              className="h-7 w-7 shrink-0"
+                              fallbackClassName="text-xs"
+                            />
+                            <div className="min-w-0 flex-1">
+                              <div className="flex items-center gap-2">
+                                <span className="text-sm font-medium">
+                                  {comment.user.name ?? comment.user.email}
+                                </span>
+                                <span className="text-muted-foreground text-xs">
+                                  {formatDistanceToNow(new Date(comment.createdAt), {
+                                    addSuffix: true,
+                                  })}
+                                </span>
+                                {comment.userId === currentUser?._id && (
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="text-muted-foreground hover:text-destructive ml-auto h-6 w-6 opacity-0 transition-opacity group-hover:opacity-100"
+                                    onClick={() => handleDeleteComment(comment._id)}
+                                  >
+                                    <X className="h-3 w-3" />
+                                  </Button>
+                                )}
+                              </div>
+                              <p className="text-sm">{renderCommentContent(comment.content)}</p>
+                            </div>
+                          </div>
+                        ))}
+                        <div ref={commentsEndRef} />
+                      </div>
+                    </ScrollArea>
+                  )}
+
+                  {/* Add Comment */}
+                  <div className="relative">
+                    {/* Mention suggestions popup */}
+                    {showMentions && mentionSuggestions.length > 0 && (
+                      <div className="bg-popover absolute bottom-full left-0 mb-1 max-h-40 w-full overflow-y-auto rounded-md border p-1 shadow-md">
+                        <div className="text-muted-foreground px-2 py-1 text-xs font-semibold">
+                          Team Members
+                        </div>
+                        {mentionSuggestions.map((user, index) => (
+                          <button
+                            key={user._id}
+                            className={`flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-none ${
+                              index === selectedMentionIndex
+                                ? "bg-accent text-accent-foreground"
+                                : "hover:bg-accent hover:text-accent-foreground"
+                            }`}
+                            onClick={() => insertMention(user)}
+                          >
+                            <UserAvatar
+                              userId={user._id}
+                              name={user.name}
+                              email={user.email}
+                              image={user.image}
+                              className="h-5 w-5"
+                              fallbackClassName="text-xs"
+                            />
+                            <span>{user.name ?? user.email}</span>
+                            {user.name && (
+                              <span className="text-muted-foreground text-xs">{user.email}</span>
+                            )}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+
+                    <div className="flex gap-2">
+                      <Input
+                        ref={commentInputRef}
+                        placeholder="Write a comment... (use @ to mention)"
+                        value={newComment}
+                        onChange={handleCommentInputChange}
+                        onKeyDown={handleCommentKeyDown}
+                        disabled={isSubmittingComment}
+                      />
                       <Button
-                        variant="ghost"
-                        size="sm"
-                        className="text-destructive w-full"
-                        onClick={() => handleSetDueDate(undefined)}
+                        size="icon"
+                        onClick={handleAddComment}
+                        disabled={!newComment.trim() || isSubmittingComment}
                       >
-                        <X className="mr-2 h-4 w-4" />
-                        Remove due date
+                        <Send className="h-4 w-4" />
                       </Button>
                     </div>
-                  )}
-                </PopoverContent>
-              </Popover>
+                  </div>
+                </div>
+              </div>
 
-              {/* Color */}
-              <Popover open={colorOpen} onOpenChange={setColorOpen}>
-                <PopoverTrigger asChild>
-                  <Button variant="secondary" size="sm" className="w-full justify-start">
-                    <Palette className="mr-2 h-4 w-4" />
-                    {card.color ? (
-                      <div className="flex items-center gap-2">
-                        <div className="h-4 w-4 rounded" style={{ backgroundColor: card.color }} />
-                        <span>Color</span>
-                      </div>
-                    ) : (
-                      "Color"
-                    )}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-48" align="start">
-                  <div className="space-y-2">
-                    <p className="text-sm font-medium">Card Color</p>
-                    <div className="grid grid-cols-4 gap-2">
-                      {CARD_COLORS.map((c) => (
+              {/* Sidebar Actions */}
+              <div className="space-y-3">
+                <p className="text-muted-foreground text-xs font-semibold uppercase">Add to card</p>
+
+                {/* Labels */}
+                <Popover open={labelsOpen} onOpenChange={setLabelsOpen}>
+                  <PopoverTrigger asChild>
+                    <Button variant="secondary" size="sm" className="w-full justify-start">
+                      <Tag className="mr-2 h-4 w-4" />
+                      Labels
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-64" align="start">
+                    <div className="space-y-2">
+                      <p className="text-sm font-medium">Labels</p>
+                      {labels?.map((label) => (
                         <button
-                          key={c.name}
-                          className="hover:ring-primary flex h-8 w-8 items-center justify-center rounded transition-all hover:ring-2"
-                          style={{
-                            backgroundColor: c.color,
-                            border: c.value === null ? "2px dashed currentColor" : "none",
-                          }}
-                          onClick={() => handleSetColor(c.value)}
+                          key={label._id}
+                          className="hover:bg-muted flex w-full items-center gap-2 rounded p-2"
+                          onClick={() => handleToggleLabel(label._id)}
                         >
-                          {card.color === c.value && c.value !== null && (
-                            <Check className="h-4 w-4 text-white" />
-                          )}
-                          {card.color === undefined && c.value === null && (
-                            <Check className="h-4 w-4" />
-                          )}
+                          <div
+                            className="h-6 flex-1 rounded"
+                            style={{ backgroundColor: label.color }}
+                          />
+                          <span className="text-sm">{label.name}</span>
+                          {card.labelIds.includes(label._id) && <Check className="h-4 w-4" />}
                         </button>
                       ))}
                     </div>
-                  </div>
-                </PopoverContent>
-              </Popover>
+                  </PopoverContent>
+                </Popover>
 
-              <Separator className="my-4" />
+                {/* Assignees */}
+                <Popover open={assigneesOpen} onOpenChange={setAssigneesOpen}>
+                  <PopoverTrigger asChild>
+                    <Button variant="secondary" size="sm" className="w-full justify-start">
+                      <User className="mr-2 h-4 w-4" />
+                      Assignees
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-64" align="start">
+                    <div className="space-y-2">
+                      <p className="text-sm font-medium">Members</p>
+                      {members?.map((user) => (
+                        <button
+                          key={user._id}
+                          className="hover:bg-muted flex w-full items-center gap-2 rounded p-2"
+                          onClick={() => handleToggleAssignee(user._id)}
+                        >
+                          <UserAvatar
+                            userId={user._id}
+                            name={user.name}
+                            email={user.email}
+                            image={user.image}
+                            className="h-6 w-6"
+                            fallbackClassName="text-xs"
+                          />
+                          <span className="flex-1 text-left text-sm">
+                            {user.name ?? user.email}
+                          </span>
+                          {card.assigneeIds.includes(user._id) && <Check className="h-4 w-4" />}
+                        </button>
+                      ))}
+                    </div>
+                  </PopoverContent>
+                </Popover>
 
-              <p className="text-muted-foreground text-xs font-semibold uppercase">Actions</p>
+                {/* Due Date */}
+                <Popover open={dateOpen} onOpenChange={setDateOpen}>
+                  <PopoverTrigger asChild>
+                    <Button variant="secondary" size="sm" className="w-full justify-start">
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {card.dueDate ? format(new Date(card.dueDate), "MMM d, yyyy") : "Due date"}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={card.dueDate ? new Date(card.dueDate) : undefined}
+                      onSelect={handleSetDueDate}
+                      initialFocus
+                    />
+                    {card.dueDate && (
+                      <div className="border-t p-2">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="text-destructive w-full"
+                          onClick={() => handleSetDueDate(undefined)}
+                        >
+                          <X className="mr-2 h-4 w-4" />
+                          Remove due date
+                        </Button>
+                      </div>
+                    )}
+                  </PopoverContent>
+                </Popover>
 
-              <Button
-                variant="secondary"
-                size="sm"
-                className="text-destructive hover:bg-destructive hover:text-destructive-foreground w-full justify-start"
-                onClick={() => setDeleteOpen(true)}
-              >
-                <Trash2 className="mr-2 h-4 w-4" />
-                Delete card
-              </Button>
+                {/* Color */}
+                <Popover open={colorOpen} onOpenChange={setColorOpen}>
+                  <PopoverTrigger asChild>
+                    <Button variant="secondary" size="sm" className="w-full justify-start">
+                      <Palette className="mr-2 h-4 w-4" />
+                      {card.color ? (
+                        <div className="flex items-center gap-2">
+                          <div
+                            className="h-4 w-4 rounded"
+                            style={{ backgroundColor: card.color }}
+                          />
+                          <span>Color</span>
+                        </div>
+                      ) : (
+                        "Color"
+                      )}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-48" align="start">
+                    <div className="space-y-2">
+                      <p className="text-sm font-medium">Card Color</p>
+                      <div className="grid grid-cols-4 gap-2">
+                        {CARD_COLORS.map((c) => (
+                          <button
+                            key={c.name}
+                            className="hover:ring-primary flex h-8 w-8 items-center justify-center rounded transition-all hover:ring-2"
+                            style={{
+                              backgroundColor: c.color,
+                              border: c.value === null ? "2px dashed currentColor" : "none",
+                            }}
+                            onClick={() => handleSetColor(c.value)}
+                          >
+                            {card.color === c.value && c.value !== null && (
+                              <Check className="h-4 w-4 text-white" />
+                            )}
+                            {card.color === undefined && c.value === null && (
+                              <Check className="h-4 w-4" />
+                            )}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  </PopoverContent>
+                </Popover>
+
+                <Separator className="my-4" />
+
+                <p className="text-muted-foreground text-xs font-semibold uppercase">Actions</p>
+
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  className="text-destructive hover:bg-destructive hover:text-destructive-foreground w-full justify-start"
+                  onClick={() => setDeleteOpen(true)}
+                >
+                  <Trash2 className="mr-2 h-4 w-4" />
+                  Delete card
+                </Button>
+              </div>
             </div>
-          </div>
+          </ScrollArea>
         </DialogContent>
       </Dialog>
 
