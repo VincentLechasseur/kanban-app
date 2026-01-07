@@ -380,16 +380,19 @@ export function CardModal({ card, boardId, open, onOpenChange }: CardModalProps)
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent className="max-h-[90vh] max-w-3xl overflow-y-auto">
-          <DialogHeader className="flex flex-row items-center justify-between">
+          <DialogHeader>
             <DialogTitle className="sr-only">Edit Card</DialogTitle>
-            {/* Options Menu */}
+          </DialogHeader>
+
+          {/* Options Menu - Top Left */}
+          <div className="absolute top-4 left-4">
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon" className="ml-auto">
+                <Button variant="ghost" size="icon">
                   <MoreHorizontal className="h-5 w-5" />
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
+              <DropdownMenuContent align="start">
                 <DropdownMenuItem
                   className="text-destructive focus:text-destructive"
                   onClick={() => setDeleteOpen(true)}
@@ -399,7 +402,7 @@ export function CardModal({ card, boardId, open, onOpenChange }: CardModalProps)
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
-          </DialogHeader>
+          </div>
 
           <div className="grid gap-6 md:grid-cols-[1fr,200px]">
             {/* Main Content */}
