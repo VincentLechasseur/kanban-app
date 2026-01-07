@@ -51,17 +51,25 @@ export function BoardChat({ boardId, open, onOpenChange }: BoardChatProps) {
     }
   }, [open, boardId, markAsRead]);
 
-  // Scroll to bottom when messages change or chat opens
+  // Scroll to bottom when messages change
   useEffect(() => {
-    if (open && scrollContainerRef.current) {
-      // Small delay to ensure content is rendered
-      setTimeout(() => {
+    if (scrollContainerRef.current) {
+      scrollContainerRef.current.scrollTop = scrollContainerRef.current.scrollHeight;
+    }
+  }, [messages]);
+
+  // Scroll to bottom when chat opens (after animation completes)
+  useEffect(() => {
+    if (open) {
+      // Wait for Sheet animation to complete (~300ms)
+      const timer = setTimeout(() => {
         if (scrollContainerRef.current) {
           scrollContainerRef.current.scrollTop = scrollContainerRef.current.scrollHeight;
         }
-      }, 50);
+      }, 350);
+      return () => clearTimeout(timer);
     }
-  }, [messages, open]);
+  }, [open]);
 
   // Reset selected index when mention search changes
   useEffect(() => {
