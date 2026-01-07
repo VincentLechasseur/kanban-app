@@ -7,7 +7,7 @@ A real-time collaborative Kanban board application built with Convex, React, and
 | Layer | Technology |
 |-------|------------|
 | Runtime | [Bun](https://bun.sh/) |
-| Framework | [Vite](https://vitejs.dev/) + [React 18](https://react.dev/) |
+| Framework | [Vite](https://vitejs.dev/) + [React 19](https://react.dev/) |
 | Language | TypeScript (strict) |
 | Backend/DB | [Convex](https://convex.dev/) (real-time reactive database) |
 | Auth | [Convex Auth](https://labs.convex.dev/auth) (GitHub, Google OAuth + Password) |
@@ -22,14 +22,30 @@ A real-time collaborative Kanban board application built with Convex, React, and
 
 ## Features
 
+### Board Management
 - **Real-time collaboration** - Changes sync instantly across all connected clients
 - **Drag & drop** - Reorder cards within columns and move between columns
 - **Team boards** - Invite members to collaborate on boards
 - **Board marketplace** - Discover public boards and request to join
-- **Team chat** - Real-time messaging with @user and !card mentions
-- **Card management** - Labels, assignees, due dates, descriptions
+- **Board reordering** - Drag boards in the sidebar to reorder them
+
+### Cards & Tasks
+- **Card management** - Labels, assignees, due dates, descriptions, colors
+- **Card comments** - Add comments with @mention support
+- **Card filtering** - Search cards and filter by assignee
+- **Card colors** - Visual color coding for cards
+
+### Communication
+- **Team chat** - Real-time board-level messaging
+- **@mentions** - Tag users in chat with `@username` or `@[Full Name]`
+- **!card references** - Link cards in chat with `!cardname` or `![Card Name]`
+- **Global notifications** - Get notified when mentioned in comments or chat
+- **Notification center** - View, mark as read, and clear all notifications
+
+### User Experience
 - **Profile customization** - Upload profile pictures, colored avatar initials
 - **Dark mode** - Toggle between light and dark themes
+- **Keyboard shortcuts** - Navigate and create with keyboard
 - **Responsive design** - Works on desktop and mobile
 
 ## Prerequisites
@@ -85,23 +101,6 @@ bun run dev
 
 The app will be available at `http://localhost:5173`
 
-## Convex Dashboard (Admin)
-
-Access the Convex dashboard to manage your data:
-
-```bash
-bunx convex dashboard
-```
-
-Or visit [dashboard.convex.dev](https://dashboard.convex.dev/) and select your project.
-
-From the dashboard you can:
-- Browse and edit data in all tables
-- View function logs and errors
-- Manage environment variables
-- Monitor real-time connections
-- View file storage
-
 ## Project Structure
 
 ```
@@ -114,11 +113,15 @@ kanban-app/
 │   ├── columns.ts             # Column mutations/queries
 │   ├── cards.ts               # Card mutations/queries
 │   ├── labels.ts              # Label mutations/queries
+│   ├── comments.ts            # Card comments
+│   ├── messages.ts            # Board chat messages
+│   ├── notifications.ts       # Notification system
+│   ├── joinRequests.ts        # Board join requests
 │   └── users.ts               # User queries
 ├── src/
 │   ├── components/
 │   │   ├── ui/                # shadcn components
-│   │   ├── board/             # Board, Column, Card components
+│   │   ├── board/             # Board, Column, Card, CardModal, BoardChat
 │   │   └── layout/            # Header, Sidebar, Layout
 │   ├── lib/
 │   │   ├── utils.ts           # Utility functions
@@ -126,6 +129,7 @@ kanban-app/
 │   ├── pages/                 # Route pages
 │   ├── App.tsx                # Main app with routing
 │   └── main.tsx               # Entry point
+├── .github/workflows/         # CI/CD (Convex auto-deploy)
 ├── package.json
 └── convex.json
 ```
@@ -187,42 +191,31 @@ bun run knip
 
 ## Database Schema
 
-- **users** - User accounts (managed by Convex Auth)
-- **boards** - Kanban boards with owner and member references
-- **columns** - Board columns with ordering
-- **cards** - Cards with labels, assignees, due dates
-- **labels** - Color-coded labels per board
-- **joinRequests** - Requests to join public boards
-- **messages** - Team chat messages per board
-- **chatReadStatus** - Tracks unread messages per user/board
-- **comments** - Card comments
+| Table | Description |
+|-------|-------------|
+| **users** | User accounts (managed by Convex Auth) |
+| **boards** | Kanban boards with owner and member references |
+| **columns** | Board columns with ordering |
+| **cards** | Cards with labels, assignees, due dates, colors |
+| **labels** | Color-coded labels per board |
+| **comments** | Card comments with @mention support |
+| **messages** | Team chat messages per board |
+| **notifications** | User notifications (mentions, assignments) |
+| **joinRequests** | Requests to join public boards |
+| **chatReadStatus** | Tracks unread messages per user/board |
 
-## Convex Best Practices
+## Deployment
 
-### Deployment
+### Auto-deploy with GitHub Actions
 
-Convex backend and frontend are deployed separately:
+Both frontend and backend deploy automatically on push to main:
 
 | Component | Deployment |
 |-----------|------------|
 | Frontend (Vite) | Vercel auto-deploys on push |
-| Backend (Convex) | Requires `bunx convex deploy` |
+| Backend (Convex) | GitHub Actions runs `bunx convex deploy` |
 
-**Important:** Schema changes (new tables, fields, indexes) require deploying Convex to production. If you only push to Vercel, your frontend will try to use tables/functions that don't exist in production yet.
-
-### Auto-deploy with GitHub Actions
-
-This project uses GitHub Actions to automatically deploy Convex on push to main:
-
-```yaml
-# .github/workflows/deploy.yml
-- name: Deploy to Convex
-  run: bunx convex deploy --yes
-  env:
-    CONVEX_DEPLOY_KEY: ${{ secrets.CONVEX_DEPLOY_KEY }}
-```
-
-**Setup:** Add your Convex deploy key to GitHub Secrets:
+**Setup Convex Deploy Key:**
 
 1. Go to [Convex Dashboard](https://dashboard.convex.dev/) > Your Project > Settings > Deploy Keys
 2. Create a new deploy key
@@ -230,62 +223,11 @@ This project uses GitHub Actions to automatically deploy Convex on push to main:
    - Name: `CONVEX_DEPLOY_KEY`
    - Value: Your deploy key
 
-This ensures your Convex backend is always in sync with your frontend.
-
 ### Manual Deployment
 
 ```bash
 bunx convex deploy         # Deploy to production (interactive)
 bunx convex deploy --yes   # Deploy without confirmation
-```
-
-### Schema Migrations
-
-Convex handles schema changes gracefully:
-
-| Change Type | Migration Required | Notes |
-|-------------|-------------------|-------|
-| Add new table | No | Table is created empty |
-| Add optional field | No | Existing docs have `undefined` |
-| Add required field | No* | Must provide default or backfill |
-| Add index | No | Index builds automatically |
-| Remove field | No | Field is ignored |
-| Remove table | Manual | Must delete data first |
-
-*For required fields on existing data, either:
-1. Make the field optional: `v.optional(v.string())`
-2. Run a migration to backfill existing documents
-
-### Environment Variables
-
-Convex uses two sets of environment variables:
-
-| Location | Purpose | Example |
-|----------|---------|---------|
-| `.env.local` | Local dev config | `CONVEX_DEPLOYMENT=dev:...` |
-| Convex Dashboard | Production secrets | `AUTH_GITHUB_SECRET=...` |
-
-Never commit secrets to git. Add them via:
-```bash
-bunx convex env set AUTH_GITHUB_SECRET "your-secret"
-```
-
-### Debugging
-
-```bash
-bunx convex logs                    # Stream dev logs
-bunx convex logs --prod             # Stream production logs
-bunx convex logs --prod --success   # Include successful calls
-bunx convex dashboard               # Open web dashboard
-```
-
-### Local Development
-
-For faster iteration, use a local Convex backend:
-
-```bash
-bunx convex dev --once              # Deploy once and exit
-bunx convex dev                     # Watch mode (auto-redeploy)
 ```
 
 ## Keyboard Shortcuts
@@ -300,6 +242,96 @@ bunx convex dev                     # Watch mode (auto-redeploy)
 | `G` then `M` | Go to Marketplace |
 | `G` then `P` | Go to Profile |
 | `1-9` | Open board by position |
+
+## Architecture Notes
+
+### Current Architecture
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                        Frontend (React)                      │
+├─────────────────────────────────────────────────────────────┤
+│  Pages          │  Components       │  UI Library            │
+│  - Home         │  - Board          │  - shadcn/ui           │
+│  - Board        │  - Column         │  - Radix primitives    │
+│  - Profile      │  - Card           │                        │
+│  - Marketplace  │  - CardModal      │                        │
+│  - Login        │  - BoardChat      │                        │
+│                 │  - Notifications  │                        │
+├─────────────────────────────────────────────────────────────┤
+│                    Convex React Hooks                        │
+│              useQuery() / useMutation()                      │
+└─────────────────────────────────────────────────────────────┘
+                              │
+                    Real-time WebSocket
+                              │
+┌─────────────────────────────────────────────────────────────┐
+│                     Backend (Convex)                         │
+├─────────────────────────────────────────────────────────────┤
+│  Queries         │  Mutations        │  Auth                 │
+│  - boards.list   │  - boards.create  │  - getAuthUserId()    │
+│  - cards.get     │  - cards.move     │  - GitHub OAuth       │
+│  - messages.list │  - comments.add   │  - Google OAuth       │
+│                  │  - notifications  │  - Password           │
+├─────────────────────────────────────────────────────────────┤
+│                      Database (Convex)                       │
+│  Tables: boards, columns, cards, labels, comments,           │
+│          messages, notifications, joinRequests, users        │
+└─────────────────────────────────────────────────────────────┘
+```
+
+### Design Decisions
+
+| Decision | Rationale |
+|----------|-----------|
+| Convex over traditional API | Real-time sync, type-safe, no REST boilerplate |
+| @dnd-kit over react-beautiful-dnd | Modern, maintained, better TypeScript support |
+| shadcn/ui over Material UI | Customizable, copy-paste components, smaller bundle |
+| Feature-based file structure | Easier to navigate, related code together |
+| No global state library | Convex handles server state, local state is minimal |
+
+### Future Improvements
+
+For continued growth and maintainability:
+
+1. **Extract Custom Hooks**
+   - `useCardModal()` - Modal state management
+   - `useBoardFilters()` - Search and filter logic
+   - `useMentions()` - @mention parsing and suggestions
+
+2. **Split Large Components**
+   - `CardModal.tsx` (500+ lines) → Extract AssigneeSection, LabelSection, CommentSection
+   - `BoardChat.tsx` → Extract MessageList, MentionSuggestions
+
+3. **Add Tests**
+   - Unit tests for card reordering logic
+   - Integration tests for auth flows
+   - E2E tests with Playwright
+
+4. **Backend Helpers**
+   - `requireBoardAccess(ctx, boardId)` - Reduce auth check duplication
+   - Structured error responses
+
+5. **Performance**
+   - Code splitting with React.lazy()
+   - Virtual scrolling for large boards
+
+## Convex Dashboard
+
+Access the Convex dashboard to manage your data:
+
+```bash
+bunx convex dashboard
+```
+
+Or visit [dashboard.convex.dev](https://dashboard.convex.dev/)
+
+From the dashboard you can:
+- Browse and edit data in all tables
+- View function logs and errors
+- Manage environment variables
+- Monitor real-time connections
+- View file storage
 
 ## License
 
