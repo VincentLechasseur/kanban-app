@@ -51,12 +51,17 @@ export function BoardChat({ boardId, open, onOpenChange }: BoardChatProps) {
     }
   }, [open, boardId, markAsRead]);
 
-  // Scroll to bottom when messages change
+  // Scroll to bottom when messages change or chat opens
   useEffect(() => {
-    if (scrollContainerRef.current) {
-      scrollContainerRef.current.scrollTop = scrollContainerRef.current.scrollHeight;
+    if (open && scrollContainerRef.current) {
+      // Small delay to ensure content is rendered
+      setTimeout(() => {
+        if (scrollContainerRef.current) {
+          scrollContainerRef.current.scrollTop = scrollContainerRef.current.scrollHeight;
+        }
+      }, 50);
     }
-  }, [messages]);
+  }, [messages, open]);
 
   // Reset selected index when mention search changes
   useEffect(() => {
