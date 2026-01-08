@@ -34,13 +34,15 @@ function LayoutContent() {
   const boards = useQuery(api.boards.list);
   const navigate = useNavigate();
 
-  const { setOpen: setCommandPaletteOpen } = useCommandPaletteContext();
+  const { setOpen: setCommandPaletteOpen, boardActions } = useCommandPaletteContext();
 
   // Keyboard shortcuts
   useKeyboardShortcuts({
     onNewBoard: () => setCreateOpen(true),
+    onNewCard: boardActions.createCard,
     onShowHelp: () => setHelpOpen(true),
     onNavigate: navigate,
+    onFocusSearch: boardActions.focusSearch,
     onOpenCommandPalette: () => setCommandPaletteOpen(true),
     boards,
   });

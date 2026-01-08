@@ -72,14 +72,22 @@ export function BoardPage() {
     api.messages.hasUnread,
     boardId ? { boardId: boardId as Id<"boards"> } : "skip"
   );
+  const columns = useQuery(
+    api.columns.list,
+    boardId ? { boardId: boardId as Id<"boards"> } : "skip"
+  );
   const updateBoard = useMutation(api.boards.update);
   const deleteBoard = useMutation(api.boards.remove);
   const updateVisibility = useMutation(api.boards.updateVisibility);
+  const createCard = useMutation(api.cards.create);
 
   const [editOpen, setEditOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [membersOpen, setMembersOpen] = useState(false);
   const [chatOpen, setChatOpen] = useState(false);
+  const [quickAddOpen, setQuickAddOpen] = useState(false);
+  const [quickAddColumnId, setQuickAddColumnId] = useState<Id<"columns"> | null>(null);
+  const [quickAddTitle, setQuickAddTitle] = useState("");
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [icon, setIcon] = useState("");
@@ -126,6 +134,30 @@ export function BoardPage() {
 
   const hasActiveFilters = searchQuery.trim() !== "" || selectedAssigneeIds.size > 0;
 
+  const openQuickAddCard = () => {
+    // Default to first column if available
+    if (columns && columns.length > 0) {
+      setQuickAddColumnId(columns[0]._id);
+    }
+    setQuickAddTitle("");
+    setQuickAddOpen(true);
+  };
+
+  const handleQuickAddCard = async () => {
+    if (!quickAddTitle.trim() || !quickAddColumnId) return;
+    try {
+      await createCard({
+        columnId: quickAddColumnId,
+        title: quickAddTitle.trim(),
+      });
+      toast.success("Card created");
+      setQuickAddOpen(false);
+      setQuickAddTitle("");
+    } catch {
+      toast.error("Failed to create card");
+    }
+  };
+
   // Register board actions for command palette
   useEffect(() => {
     if (!board) return;
@@ -144,7 +176,10 @@ export function BoardPage() {
       openDeleteBoard: isOwner ? () => setDeleteOpen(true) : undefined,
       openMembersModal: () => setMembersOpen(true),
       toggleChat: () => setChatOpen((prev) => !prev),
-      focusSearch: () => searchInputRef.current?.focus(),
+      createCard: openQuickAddCard,
+      focusSearch: () => {
+        searchInputRef.current?.focus();
+      },
       clearFilters,
       hasActiveFilters,
     });
@@ -152,7 +187,7 @@ export function BoardPage() {
     return () => {
       clearBoardActions();
     };
-  }, [board, currentUser?._id, hasActiveFilters, registerBoardActions, clearBoardActions]);
+  }, [board, currentUser?._id, hasActiveFilters, columns, registerBoardActions, clearBoardActions]);
 
   if (!boardId) {
     return (
@@ -544,6 +579,55 @@ export function BoardPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Quick Add Card Dialog */}
+      <Dialog open={quickAddOpen} onOpenChange={setQuickAddOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Create new card</DialogTitle>
+            <DialogDescription>Add a new card to your board.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="quick-add-column">Column</Label>
+              <select
+                id="quick-add-column"
+                value={quickAddColumnId ?? ""}
+                onChange={(e) => setQuickAddColumnId(e.target.value as Id<"columns">)}
+                className="border-input bg-background ring-offset-background placeholder:text-muted-foreground focus-visible:ring-ring flex h-10 w-full rounded-md border px-3 py-2 text-sm focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {columns?.map((col) => (
+                  <option key={col._id} value={col._id}>
+                    {col.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="quick-add-title">Card title</Label>
+              <Input
+                id="quick-add-title"
+                placeholder="Enter card title..."
+                value={quickAddTitle}
+                onChange={(e) => setQuickAddTitle(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && handleQuickAddCard()}
+                autoFocus
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setQuickAddOpen(false)}>
+              Cancel
+            </Button>
+            <Button
+              onClick={handleQuickAddCard}
+              disabled={!quickAddTitle.trim() || !quickAddColumnId}
+            >
+              Create Card
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
