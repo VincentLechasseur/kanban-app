@@ -27,6 +27,7 @@ const SHORTCUTS = [
   {
     category: "General",
     shortcuts: [
+      { keys: ["⌘/Ctrl", "K"], description: "Open command palette" },
       { keys: ["?"], description: "Show keyboard shortcuts" },
       { keys: ["/"], description: "Focus search (on board)" },
     ],
@@ -91,6 +92,7 @@ interface UseKeyboardShortcutsOptions {
   onShowHelp: () => void;
   onNavigate: (path: string) => void;
   onFocusSearch?: () => void;
+  onOpenCommandPalette?: () => void;
   boards?: { _id: string }[];
 }
 
@@ -100,11 +102,19 @@ export function useKeyboardShortcuts({
   onShowHelp,
   onNavigate,
   onFocusSearch,
+  onOpenCommandPalette,
   boards,
 }: UseKeyboardShortcutsOptions) {
   const handleKeyDown = useCallback(
     (event: KeyboardEvent) => {
-      // Don't trigger shortcuts when typing in inputs
+      // Command palette shortcut (Cmd+K / Ctrl+K) - works even in inputs
+      if ((event.metaKey || event.ctrlKey) && event.key === "k") {
+        event.preventDefault();
+        onOpenCommandPalette?.();
+        return;
+      }
+
+      // Don't trigger other shortcuts when typing in inputs
       const target = event.target as HTMLElement;
       const isInput =
         target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.isContentEditable;
@@ -201,7 +211,7 @@ export function useKeyboardShortcuts({
           break;
       }
     },
-    [onNewBoard, onNewCard, onShowHelp, onNavigate, onFocusSearch, boards]
+    [onNewBoard, onNewCard, onShowHelp, onNavigate, onFocusSearch, onOpenCommandPalette, boards]
   );
 
   useEffect(() => {

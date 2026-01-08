@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "../../convex/_generated/api";
@@ -6,6 +6,7 @@ import type { Id } from "../../convex/_generated/dataModel";
 import { Board } from "@/components/board/Board";
 import { MembersModal } from "@/components/board/MembersModal";
 import { BoardChat } from "@/components/board/BoardChat";
+import { useCommandPaletteContext } from "@/contexts/CommandPaletteContext";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -90,6 +91,10 @@ export function BoardPage() {
   // Filter state
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedAssigneeIds, setSelectedAssigneeIds] = useState<Set<Id<"users">>>(new Set());
+  const searchInputRef = useRef<HTMLInputElement>(null);
+
+  // Command palette integration
+  const { registerBoardActions, clearBoardActions } = useCommandPaletteContext();
 
   // Handle URL params for opening chat from notifications
   useEffect(() => {
@@ -120,6 +125,34 @@ export function BoardPage() {
   };
 
   const hasActiveFilters = searchQuery.trim() !== "" || selectedAssigneeIds.size > 0;
+
+  // Register board actions for command palette
+  useEffect(() => {
+    if (!board) return;
+
+    const isOwner = currentUser?._id === board.ownerId;
+
+    registerBoardActions({
+      boardName: board.name,
+      isOwner,
+      openEditBoard: () => {
+        setName(board.name);
+        setDescription(board.description ?? "");
+        setIcon(board.icon ?? "");
+        setEditOpen(true);
+      },
+      openDeleteBoard: isOwner ? () => setDeleteOpen(true) : undefined,
+      openMembersModal: () => setMembersOpen(true),
+      toggleChat: () => setChatOpen((prev) => !prev),
+      focusSearch: () => searchInputRef.current?.focus(),
+      clearFilters,
+      hasActiveFilters,
+    });
+
+    return () => {
+      clearBoardActions();
+    };
+  }, [board, currentUser?._id, hasActiveFilters, registerBoardActions, clearBoardActions]);
 
   if (!boardId) {
     return (
@@ -236,6 +269,7 @@ export function BoardPage() {
           <div className="relative">
             <Search className="text-muted-foreground absolute top-1/2 left-2.5 h-4 w-4 -translate-y-1/2" />
             <Input
+              ref={searchInputRef}
               placeholder="Search cards..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}

@@ -18,9 +18,11 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { EmojiPicker } from "@/components/EmojiPicker";
 import { KeyboardShortcutsDialog, useKeyboardShortcuts } from "@/components/KeyboardShortcuts";
+import { CommandPalette } from "@/components/CommandPalette";
+import { CommandPaletteProvider, useCommandPaletteContext } from "@/contexts/CommandPaletteContext";
 import { toast } from "sonner";
 
-export function Layout() {
+function LayoutContent() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [createOpen, setCreateOpen] = useState(false);
   const [helpOpen, setHelpOpen] = useState(false);
@@ -32,11 +34,14 @@ export function Layout() {
   const boards = useQuery(api.boards.list);
   const navigate = useNavigate();
 
+  const { setOpen: setCommandPaletteOpen } = useCommandPaletteContext();
+
   // Keyboard shortcuts
   useKeyboardShortcuts({
     onNewBoard: () => setCreateOpen(true),
     onShowHelp: () => setHelpOpen(true),
     onNavigate: navigate,
+    onOpenCommandPalette: () => setCommandPaletteOpen(true),
     boards,
   });
 
@@ -137,6 +142,20 @@ export function Layout() {
 
       {/* Keyboard Shortcuts Help */}
       <KeyboardShortcutsDialog open={helpOpen} onOpenChange={setHelpOpen} />
+
+      {/* Command Palette */}
+      <CommandPalette
+        onCreateBoard={() => setCreateOpen(true)}
+        onShowHelp={() => setHelpOpen(true)}
+      />
     </div>
+  );
+}
+
+export function Layout() {
+  return (
+    <CommandPaletteProvider>
+      <LayoutContent />
+    </CommandPaletteProvider>
   );
 }
