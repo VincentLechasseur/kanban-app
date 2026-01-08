@@ -2,33 +2,43 @@ import { useState, useRef, useEffect, useMemo, useCallback } from "react";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "../../../convex/_generated/api";
 import type { Doc, Id } from "../../../convex/_generated/dataModel";
-import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-  SheetDescription,
-} from "@/components/ui/sheet";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { UserAvatar } from "@/components/UserAvatar";
 import { CardModal } from "@/components/board/CardModal";
-import { Send, HelpCircle, User, StickyNote } from "lucide-react";
+import {
+  Send,
+  HelpCircle,
+  User,
+  StickyNote,
+  MessageCircle,
+  Minus,
+  X,
+  GripHorizontal,
+  Users,
+} from "lucide-react";
+import { cn } from "@/lib/utils";
 
 interface BoardChatProps {
   boardId: Id<"boards">;
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
+  state: "hidden" | "minimized" | "expanded";
+  onStateChange: (state: "hidden" | "minimized" | "expanded") => void;
 }
 
 type MentionType = "user" | "card" | null;
 
-export function BoardChat({ boardId, open, onOpenChange }: BoardChatProps) {
+const MIN_HEIGHT = 200;
+const MAX_HEIGHT_VH = 70;
+const DEFAULT_HEIGHT = 350;
+const STORAGE_KEY = "boardChatHeight";
+
+export function BoardChat({ boardId, state, onStateChange }: BoardChatProps) {
   const messages = useQuery(api.messages.list, { boardId });
   const currentUser = useQuery(api.users.currentUser);
   const members = useQuery(api.boards.getMembers, { boardId });
   const cards = useQuery(api.cards.listByBoard, { boardId });
+  const hasUnread = useQuery(api.messages.hasUnread, { boardId });
   const sendMessage = useMutation(api.messages.send);
   const markAsRead = useMutation(api.messages.markAsRead);
   const createChatMentionNotification = useMutation(
@@ -41,40 +51,83 @@ export function BoardChat({ boardId, open, onOpenChange }: BoardChatProps) {
   const [mentionSearch, setMentionSearch] = useState("");
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [selectedCard, setSelectedCard] = useState<Doc<"cards"> | null>(null);
+  const [height, setHeight] = useState(() => {
+    if (typeof window === "undefined") return DEFAULT_HEIGHT;
+    return parseInt(localStorage.getItem(STORAGE_KEY) ?? String(DEFAULT_HEIGHT));
+  });
+  const [isResizing, setIsResizing] = useState(false);
+  const [isAnimating, setIsAnimating] = useState(false);
+
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const drawerRef = useRef<HTMLDivElement>(null);
 
-  // Mark as read when chat is opened
+  // Mark as read when chat is expanded
   useEffect(() => {
-    if (open) {
+    if (state === "expanded") {
       markAsRead({ boardId });
     }
-  }, [open, boardId, markAsRead]);
+  }, [state, boardId, markAsRead]);
 
   // Scroll to bottom when messages change
   useEffect(() => {
-    if (scrollContainerRef.current) {
+    if (scrollContainerRef.current && state === "expanded") {
       scrollContainerRef.current.scrollTop = scrollContainerRef.current.scrollHeight;
     }
-  }, [messages]);
+  }, [messages, state]);
 
-  // Scroll to bottom when chat opens (after animation completes)
+  // Scroll to bottom when chat expands (after animation)
   useEffect(() => {
-    if (open) {
-      // Wait for Sheet animation to complete (~300ms)
+    if (state === "expanded") {
+      setIsAnimating(true);
       const timer = setTimeout(() => {
+        setIsAnimating(false);
         if (scrollContainerRef.current) {
           scrollContainerRef.current.scrollTop = scrollContainerRef.current.scrollHeight;
         }
-      }, 350);
+        inputRef.current?.focus();
+      }, 300);
       return () => clearTimeout(timer);
     }
-  }, [open]);
+  }, [state]);
 
   // Reset selected index when mention search changes
   useEffect(() => {
     setSelectedIndex(0);
   }, [mentionSearch, mentionType]);
+
+  // Persist height to localStorage
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEY, String(height));
+  }, [height]);
+
+  // Handle resize drag
+  const handleResizeStart = useCallback(
+    (e: React.MouseEvent) => {
+      e.preventDefault();
+      setIsResizing(true);
+
+      const startY = e.clientY;
+      const startHeight = height;
+      const maxHeight = window.innerHeight * (MAX_HEIGHT_VH / 100);
+
+      const handleMouseMove = (e: MouseEvent) => {
+        const deltaY = startY - e.clientY;
+        const newHeight = Math.min(Math.max(startHeight + deltaY, MIN_HEIGHT), maxHeight);
+        setHeight(newHeight);
+      };
+
+      const handleMouseUp = () => {
+        setIsResizing(false);
+        document.removeEventListener("mousemove", handleMouseMove);
+        document.removeEventListener("mouseup", handleMouseUp);
+      };
+
+      document.addEventListener("mousemove", handleMouseMove);
+      document.addEventListener("mouseup", handleMouseUp);
+    },
+    [height]
+  );
 
   // Filter suggestions based on search (exclude current user from mentions)
   const userSuggestions = useMemo(() => {
@@ -101,12 +154,9 @@ export function BoardChat({ boardId, open, onOpenChange }: BoardChatProps) {
       if (!members || members.length === 0) return [];
 
       const mentionedUserIds: Id<"users">[] = [];
-
-      // Match @[Name With Spaces] or @name patterns
       const bracketMentionRegex = /@\[([^\]]+)\]/g;
       const simpleMentionRegex = /@(\S+)/g;
 
-      // First, extract bracket mentions
       let match;
       while ((match = bracketMentionRegex.exec(text)) !== null) {
         const mentionName = match[1].trim();
@@ -120,7 +170,6 @@ export function BoardChat({ boardId, open, onOpenChange }: BoardChatProps) {
         }
       }
 
-      // Then, extract simple mentions (but skip those already in brackets)
       const textWithoutBrackets = text.replace(/@\[[^\]]+\]/g, "");
       while ((match = simpleMentionRegex.exec(textWithoutBrackets)) !== null) {
         const mentionName = match[1].trim();
@@ -148,7 +197,6 @@ export function BoardChat({ boardId, open, onOpenChange }: BoardChatProps) {
     try {
       const messageId = await sendMessage({ boardId, content: messageContent });
 
-      // Create notifications for mentioned users
       const mentionedUserIds = parseUserMentions(messageContent);
       for (const mentionedUserId of mentionedUserIds) {
         try {
@@ -164,7 +212,6 @@ export function BoardChat({ boardId, open, onOpenChange }: BoardChatProps) {
 
       setContent("");
       setMentionType(null);
-      // Keep focus on input after sending
       inputRef.current?.focus();
     } catch (error) {
       console.error("Failed to send message:", error);
@@ -177,15 +224,12 @@ export function BoardChat({ boardId, open, onOpenChange }: BoardChatProps) {
     const value = e.target.value;
     setContent(value);
 
-    // Detect mention triggers
     const cursorPos = e.target.selectionStart ?? value.length;
     const textBeforeCursor = value.slice(0, cursorPos);
 
-    // Check for bracket syntax first: @[ or ![
     const lastAtBracket = textBeforeCursor.lastIndexOf("@[");
     const lastExclamationBracket = textBeforeCursor.lastIndexOf("![");
 
-    // Check if we're inside an unclosed bracket mention
     if (lastAtBracket !== -1 && !textBeforeCursor.slice(lastAtBracket).includes("]")) {
       setMentionType("user");
       setMentionSearch(textBeforeCursor.slice(lastAtBracket + 2));
@@ -200,11 +244,9 @@ export function BoardChat({ boardId, open, onOpenChange }: BoardChatProps) {
       return;
     }
 
-    // Find the last @ or ! before cursor (simple mentions without brackets)
     const lastAtIndex = textBeforeCursor.lastIndexOf("@");
     const lastExclamationIndex = textBeforeCursor.lastIndexOf("!");
 
-    // Check if we're in a mention context (no space between trigger and cursor)
     if (
       lastAtIndex !== -1 &&
       lastAtIndex > lastAtBracket &&
@@ -229,21 +271,17 @@ export function BoardChat({ boardId, open, onOpenChange }: BoardChatProps) {
     const cursorPos = inputRef.current?.selectionStart ?? content.length;
     const textBeforeCursor = content.slice(0, cursorPos);
 
-    // Find where the mention started - check for bracket syntax first
     const triggerChar = mentionType === "user" ? "@" : "!";
     const bracketTrigger = `${triggerChar}[`;
     const bracketIndex = textBeforeCursor.lastIndexOf(bracketTrigger);
     const simpleIndex = textBeforeCursor.lastIndexOf(triggerChar);
 
-    // Determine if we're in bracket mode
     const inBracketMode =
       bracketIndex !== -1 && !textBeforeCursor.slice(bracketIndex).includes("]");
 
-    // Use bracket syntax if text has spaces or if already in bracket mode
     const needsBrackets = text.includes(" ") || inBracketMode;
 
     if (inBracketMode) {
-      // Complete the bracket mention
       const beforeTrigger = content.slice(0, bracketIndex);
       const afterCursor = content.slice(cursorPos);
       const newContent = `${beforeTrigger}${triggerChar}[${text}] ${afterCursor}`;
@@ -292,11 +330,12 @@ export function BoardChat({ boardId, open, onOpenChange }: BoardChatProps) {
     } else if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
       handleSend();
+    } else if (e.key === "Escape") {
+      onStateChange("minimized");
     }
   };
 
   const handleCardMentionClick = (cardTitle: string) => {
-    // Find the card by title
     const card = cards?.find((c) => c.title === cardTitle);
     if (card) {
       setSelectedCard(card);
@@ -335,16 +374,12 @@ export function BoardChat({ boardId, open, onOpenChange }: BoardChatProps) {
     groupedMessages[groupedMessages.length - 1].messages.push(message);
   });
 
-  // Render message content with highlighted mentions
-  // Supports both @name, !name and @[name with spaces], ![name with spaces]
   const renderMessageContent = (text: string, isOwn: boolean) => {
-    // Regex to find mentions: @word, !word, @[...], ![...]
     const mentionRegex = /(@\[[^\]]+\]|!\[[^\]]+\]|@\S+|!\S+)/g;
     const parts = text.split(mentionRegex);
 
     return parts.map((part, i) => {
       if (part.startsWith("![")) {
-        // Bracket card mention - extract title without brackets
         const cardTitle = part.slice(2, -1);
         return (
           <button
@@ -361,7 +396,6 @@ export function BoardChat({ boardId, open, onOpenChange }: BoardChatProps) {
           </button>
         );
       } else if (part.startsWith("!")) {
-        // Simple card mention
         const cardTitle = part.slice(1);
         return (
           <button
@@ -378,7 +412,6 @@ export function BoardChat({ boardId, open, onOpenChange }: BoardChatProps) {
           </button>
         );
       } else if (part.startsWith("@[") || part.startsWith("@")) {
-        // User mention - just styled
         return (
           <span
             key={i}
@@ -392,16 +425,116 @@ export function BoardChat({ boardId, open, onOpenChange }: BoardChatProps) {
     });
   };
 
+  // Don't render if hidden
+  if (state === "hidden") return null;
+
   return (
     <>
-      <Sheet open={open} onOpenChange={onOpenChange}>
-        <SheetContent className="flex h-full flex-col overflow-hidden p-0 sm:max-w-md">
-          <SheetHeader className="shrink-0 border-b px-4 py-4">
-            <SheetTitle>Team Chat</SheetTitle>
-            <SheetDescription className="sr-only">Chat with your team members</SheetDescription>
-          </SheetHeader>
+      {/* Minimized Pill */}
+      {state === "minimized" && (
+        <button
+          onClick={() => onStateChange("expanded")}
+          className={cn(
+            "fixed right-6 bottom-6 z-50",
+            "bg-primary text-primary-foreground",
+            "flex items-center gap-2 rounded-full px-4 py-2.5",
+            "shadow-lg transition-all duration-200",
+            "hover:scale-105 hover:shadow-xl",
+            "focus:ring-ring focus:ring-2 focus:ring-offset-2 focus:outline-none"
+          )}
+        >
+          <MessageCircle className="h-5 w-5" />
+          <span className="text-sm font-medium">Team Chat</span>
+          {hasUnread && (
+            <span className="bg-destructive flex h-5 min-w-5 items-center justify-center rounded-full px-1.5 text-xs font-bold text-white">
+              {messages?.filter((m) => m.userId !== currentUser?._id).length ?? ""}
+            </span>
+          )}
+        </button>
+      )}
 
-          {/* Scrollable messages area */}
+      {/* Expanded Drawer */}
+      {state === "expanded" && (
+        <div
+          ref={drawerRef}
+          style={{ height: `${height}px` }}
+          className={cn(
+            "fixed inset-x-0 bottom-0 z-50",
+            "bg-background border-t shadow-2xl",
+            "flex flex-col",
+            "lg:left-64", // Account for sidebar on desktop
+            isAnimating && "animate-in slide-in-from-bottom duration-300",
+            !isResizing && "transition-[height] duration-100"
+          )}
+        >
+          {/* Resize Handle / Header */}
+          <div
+            onMouseDown={handleResizeStart}
+            className={cn(
+              "flex shrink-0 cursor-ns-resize items-center justify-between border-b px-4 py-2",
+              "bg-muted/50 hover:bg-muted transition-colors",
+              "select-none"
+            )}
+          >
+            {/* Drag indicator */}
+            <div className="flex flex-1 items-center justify-center">
+              <GripHorizontal className="text-muted-foreground h-5 w-5" />
+            </div>
+
+            {/* Title and member count */}
+            <div className="flex flex-1 items-center justify-center gap-2">
+              <MessageCircle className="h-4 w-4" />
+              <span className="font-semibold">Team Chat</span>
+              {members && (
+                <span className="text-muted-foreground flex items-center gap-1 text-sm">
+                  <Users className="h-3 w-3" />
+                  {members.length}
+                </span>
+              )}
+            </div>
+
+            {/* Action buttons */}
+            <div className="flex flex-1 items-center justify-end gap-1">
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-7 w-7"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onStateChange("minimized");
+                      }}
+                    >
+                      <Minus className="h-4 w-4" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>Minimize</TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-7 w-7"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onStateChange("hidden");
+                      }}
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>Close</TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            </div>
+          </div>
+
+          {/* Messages Area */}
           <div ref={scrollContainerRef} className="flex-1 overflow-y-auto px-4">
             {messages === undefined ? (
               <div className="flex h-full items-center justify-center py-8">
@@ -464,6 +597,7 @@ export function BoardChat({ boardId, open, onOpenChange }: BoardChatProps) {
             )}
           </div>
 
+          {/* Input Area */}
           <div className="shrink-0 border-t p-4">
             {/* Mention suggestions popup */}
             {mentionType && suggestions.length > 0 && (
@@ -537,6 +671,12 @@ export function BoardChat({ boardId, open, onOpenChange }: BoardChatProps) {
                         </kbd>
                         <span>Reference a card (clickable)</span>
                       </div>
+                      <div className="flex items-center gap-2">
+                        <kbd className="border-input bg-secondary text-secondary-foreground rounded border px-1.5 py-0.5 font-mono text-xs">
+                          Esc
+                        </kbd>
+                        <span>Minimize chat</span>
+                      </div>
                     </div>
                   </TooltipContent>
                 </Tooltip>
@@ -546,8 +686,8 @@ export function BoardChat({ boardId, open, onOpenChange }: BoardChatProps) {
               </Button>
             </div>
           </div>
-        </SheetContent>
-      </Sheet>
+        </div>
+      )}
 
       {/* Card Modal */}
       {selectedCard && (

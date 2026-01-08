@@ -43,7 +43,6 @@ import { EmojiPicker } from "@/components/EmojiPicker";
 import {
   Globe,
   Lock,
-  MessageCircle,
   MoreHorizontal,
   Pencil,
   Search,
@@ -68,10 +67,6 @@ export function BoardPage() {
     api.joinRequests.getPendingCount,
     boardId ? { boardId: boardId as Id<"boards"> } : "skip"
   );
-  const hasUnreadMessages = useQuery(
-    api.messages.hasUnread,
-    boardId ? { boardId: boardId as Id<"boards"> } : "skip"
-  );
   const columns = useQuery(
     api.columns.list,
     boardId ? { boardId: boardId as Id<"boards"> } : "skip"
@@ -84,7 +79,7 @@ export function BoardPage() {
   const [editOpen, setEditOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [membersOpen, setMembersOpen] = useState(false);
-  const [chatOpen, setChatOpen] = useState(false);
+  const [chatState, setChatState] = useState<"hidden" | "minimized" | "expanded">("minimized");
   const [quickAddOpen, setQuickAddOpen] = useState(false);
   const [quickAddColumnId, setQuickAddColumnId] = useState<Id<"columns"> | null>(null);
   const [quickAddTitle, setQuickAddTitle] = useState("");
@@ -108,7 +103,7 @@ export function BoardPage() {
   useEffect(() => {
     const shouldOpenChat = searchParams.get("chat") === "true";
     if (shouldOpenChat && board) {
-      setChatOpen(true);
+      setChatState("expanded");
       // Clear the param after opening
       searchParams.delete("chat");
       setSearchParams(searchParams, { replace: true });
@@ -175,7 +170,7 @@ export function BoardPage() {
       },
       openDeleteBoard: isOwner ? () => setDeleteOpen(true) : undefined,
       openMembersModal: () => setMembersOpen(true),
-      toggleChat: () => setChatOpen((prev) => !prev),
+      toggleChat: () => setChatState((prev) => (prev === "expanded" ? "minimized" : "expanded")),
       createCard: openQuickAddCard,
       focusSearch: () => {
         searchInputRef.current?.focus();
@@ -447,19 +442,6 @@ export function BoardPage() {
             </div>
           </TooltipProvider>
 
-          {/* Chat Button */}
-          <Button
-            variant="outline"
-            size="icon"
-            className="relative"
-            onClick={() => setChatOpen(true)}
-          >
-            <MessageCircle className="h-5 w-5" />
-            {hasUnreadMessages && (
-              <span className="bg-destructive absolute -top-1 -right-1 h-3 w-3 rounded-full" />
-            )}
-          </Button>
-
           {/* Menu */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -516,7 +498,7 @@ export function BoardPage() {
       />
 
       {/* Team Chat */}
-      <BoardChat boardId={board._id} open={chatOpen} onOpenChange={setChatOpen} />
+      <BoardChat boardId={board._id} state={chatState} onStateChange={setChatState} />
 
       {/* Edit Dialog */}
       <Dialog open={editOpen} onOpenChange={setEditOpen}>
