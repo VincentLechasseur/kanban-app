@@ -14,14 +14,6 @@ export default defineSchema({
     isPublic: v.optional(v.boolean()),
     order: v.optional(v.number()),
     createdAt: v.number(),
-    // Board background customization
-    background: v.optional(
-      v.object({
-        type: v.union(v.literal("color"), v.literal("gradient"), v.literal("image")),
-        value: v.string(),
-        overlay: v.optional(v.number()),
-      })
-    ),
   })
     .index("by_owner", ["ownerId"])
     .index("by_member", ["memberIds"])

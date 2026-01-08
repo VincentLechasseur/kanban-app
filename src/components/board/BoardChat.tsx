@@ -70,6 +70,7 @@ export function BoardChat({ boardId, state, onStateChange }: BoardChatProps) {
   // Search state
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [highlightedMessageId, setHighlightedMessageId] = useState<Id<"messages"> | null>(null);
   const searchResults = useQuery(
     api.messages.search,
     searchQuery.trim() ? { boardId, query: searchQuery } : "skip"
@@ -275,6 +276,26 @@ export function BoardChat({ boardId, state, onStateChange }: BoardChatProps) {
     } catch (error) {
       console.error("Failed to delete message:", error);
     }
+  };
+
+  // Scroll to and highlight a message
+  const scrollToMessage = (messageId: Id<"messages">) => {
+    setSearchOpen(false);
+    setSearchQuery("");
+    setHighlightedMessageId(messageId);
+
+    // Wait for search panel to close, then scroll
+    setTimeout(() => {
+      const messageElement = document.querySelector(`[data-message-id="${messageId}"]`);
+      if (messageElement && scrollContainerRef.current) {
+        messageElement.scrollIntoView({ behavior: "smooth", block: "center" });
+      }
+    }, 100);
+
+    // Clear highlight after animation
+    setTimeout(() => {
+      setHighlightedMessageId(null);
+    }, 2000);
   };
 
   // Trigger typing indicator
@@ -664,11 +685,7 @@ export function BoardChat({ boardId, state, onStateChange }: BoardChatProps) {
                         <div
                           key={result._id}
                           className="bg-background hover:bg-accent cursor-pointer rounded-md p-2 text-sm"
-                          onClick={() => {
-                            setSearchOpen(false);
-                            setSearchQuery("");
-                            // Scroll to message would require refs - for now just close search
-                          }}
+                          onClick={() => scrollToMessage(result._id)}
                         >
                           <div className="text-muted-foreground mb-1 flex items-center gap-2 text-xs">
                             <span className="font-medium">
@@ -713,11 +730,18 @@ export function BoardChat({ boardId, state, onStateChange }: BoardChatProps) {
                         const isOwn = message.userId === currentUser?._id;
                         const isEditing = editingMessageId === message._id;
                         const isDeleted = message.isDeleted;
+                        const isHighlighted = highlightedMessageId === message._id;
 
                         return (
                           <div
                             key={message._id}
-                            className={`group flex gap-2 ${isOwn ? "flex-row-reverse" : ""}`}
+                            data-message-id={message._id}
+                            className={cn(
+                              "group flex gap-2",
+                              isOwn ? "flex-row-reverse" : "",
+                              isHighlighted &&
+                                "-m-2 animate-pulse rounded-lg bg-yellow-100 p-2 dark:bg-yellow-900/30"
+                            )}
                           >
                             <UserAvatar
                               userId={message.user._id}
