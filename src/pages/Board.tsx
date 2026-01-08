@@ -6,6 +6,16 @@ import type { Id } from "../../convex/_generated/dataModel";
 import { Board } from "@/components/board/Board";
 import { MembersModal } from "@/components/board/MembersModal";
 import { BoardChat } from "@/components/board/BoardChat";
+import { ActivityFeed } from "@/components/board/ActivityFeed";
+import { BoardAnalytics } from "@/components/board/BoardAnalytics";
+import { BackgroundPicker } from "@/components/board/BackgroundPicker";
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
 import { useCommandPaletteContext } from "@/contexts/CommandPaletteContext";
 import { Button } from "@/components/ui/button";
 import {
@@ -41,7 +51,10 @@ import { UserAvatar } from "@/components/UserAvatar";
 import { Badge } from "@/components/ui/badge";
 import { EmojiPicker } from "@/components/EmojiPicker";
 import {
+  Activity,
+  BarChart3,
   Globe,
+  Image,
   Lock,
   MoreHorizontal,
   Pencil,
@@ -79,6 +92,9 @@ export function BoardPage() {
   const [editOpen, setEditOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [membersOpen, setMembersOpen] = useState(false);
+  const [activityOpen, setActivityOpen] = useState(false);
+  const [analyticsOpen, setAnalyticsOpen] = useState(false);
+  const [backgroundOpen, setBackgroundOpen] = useState(false);
   const [chatState, setChatState] = useState<"hidden" | "minimized" | "expanded">("minimized");
   const [quickAddOpen, setQuickAddOpen] = useState(false);
   const [quickAddColumnId, setQuickAddColumnId] = useState<Id<"columns"> | null>(null);
@@ -265,8 +281,33 @@ export function BoardPage() {
 
   const isOwner = currentUser?._id === board.ownerId;
 
+  // Generate background style
+  const backgroundStyle: React.CSSProperties = board.background
+    ? {
+        ...(board.background.type === "color" && { backgroundColor: board.background.value }),
+        ...(board.background.type === "gradient" && { background: board.background.value }),
+        ...(board.background.type === "image" && {
+          backgroundImage: `url(${board.background.value})`,
+          backgroundSize: "cover",
+          backgroundPosition: "center",
+        }),
+      }
+    : {};
+
   return (
-    <div className="flex h-full flex-col">
+    <div className="relative flex h-full flex-col">
+      {/* Background layer */}
+      {board.background && (
+        <>
+          <div className="absolute inset-0 -z-10" style={backgroundStyle} />
+          {board.background.overlay && board.background.overlay > 0 && (
+            <div
+              className="absolute inset-0 -z-10 bg-black"
+              style={{ opacity: board.background.overlay / 100 }}
+            />
+          )}
+        </>
+      )}
       <div className="bg-background flex items-center justify-between border-b px-6 py-4">
         <div>
           <div className="flex items-center gap-2">
@@ -474,6 +515,21 @@ export function BoardPage() {
                 </DropdownMenuItem>
               )}
               <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={() => setActivityOpen(true)}>
+                <Activity className="mr-2 h-4 w-4" />
+                Activity feed
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setAnalyticsOpen(true)}>
+                <BarChart3 className="mr-2 h-4 w-4" />
+                Analytics
+              </DropdownMenuItem>
+              {isOwner && (
+                <DropdownMenuItem onClick={() => setBackgroundOpen(true)}>
+                  <Image className="mr-2 h-4 w-4" />
+                  Background
+                </DropdownMenuItem>
+              )}
+              <DropdownMenuSeparator />
               <DropdownMenuItem className="text-destructive" onClick={() => setDeleteOpen(true)}>
                 <Trash2 className="mr-2 h-4 w-4" />
                 Delete board
@@ -608,6 +664,58 @@ export function BoardPage() {
               Create Card
             </Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Activity Feed Sheet */}
+      <Sheet open={activityOpen} onOpenChange={setActivityOpen}>
+        <SheetContent className="w-[400px] sm:w-[540px]">
+          <SheetHeader>
+            <SheetTitle className="flex items-center gap-2">
+              <Activity className="h-5 w-5" />
+              Activity Feed
+            </SheetTitle>
+            <SheetDescription>Recent activity on this board</SheetDescription>
+          </SheetHeader>
+          <div className="mt-4 h-[calc(100vh-120px)]">
+            <ActivityFeed boardId={board._id} />
+          </div>
+        </SheetContent>
+      </Sheet>
+
+      {/* Analytics Sheet */}
+      <Sheet open={analyticsOpen} onOpenChange={setAnalyticsOpen}>
+        <SheetContent className="w-[400px] sm:w-[640px]">
+          <SheetHeader>
+            <SheetTitle className="flex items-center gap-2">
+              <BarChart3 className="h-5 w-5" />
+              Board Analytics
+            </SheetTitle>
+            <SheetDescription>Insights and statistics for this board</SheetDescription>
+          </SheetHeader>
+          <div className="mt-4 h-[calc(100vh-120px)]">
+            <BoardAnalytics boardId={board._id} />
+          </div>
+        </SheetContent>
+      </Sheet>
+
+      {/* Background Picker Dialog */}
+      <Dialog open={backgroundOpen} onOpenChange={setBackgroundOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Image className="h-5 w-5" />
+              Board Background
+            </DialogTitle>
+            <DialogDescription>
+              Customize your board's appearance with a background color, gradient, or image.
+            </DialogDescription>
+          </DialogHeader>
+          <BackgroundPicker
+            boardId={board._id}
+            currentBackground={board.background}
+            onClose={() => setBackgroundOpen(false)}
+          />
         </DialogContent>
       </Dialog>
     </div>

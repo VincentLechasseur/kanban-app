@@ -1,4 +1,5 @@
 import { mutation, query } from "./_generated/server";
+import { internal } from "./_generated/api";
 import { getAuthUserId } from "@convex-dev/auth/server";
 import { v } from "convex/values";
 
@@ -79,12 +80,25 @@ export const add = mutation({
     const content = args.content.trim();
     if (!content) throw new Error("Comment cannot be empty");
 
-    return await ctx.db.insert("comments", {
+    const commentId = await ctx.db.insert("comments", {
       cardId: args.cardId,
       userId,
       content,
       createdAt: Date.now(),
     });
+
+    // Log activity
+    await ctx.runMutation(internal.activities.log, {
+      boardId: card.boardId,
+      userId,
+      type: "comment_added",
+      cardId: args.cardId,
+      metadata: {
+        cardTitle: card.title,
+      },
+    });
+
+    return commentId;
   },
 });
 

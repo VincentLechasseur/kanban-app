@@ -82,6 +82,114 @@ export const list = query({
   },
 });
 
+export const update = mutation({
+  args: {
+    id: v.id("messages"),
+    content: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) throw new Error("Not authenticated");
+
+    const message = await ctx.db.get(args.id);
+    if (!message) throw new Error("Message not found");
+
+    // Only the author can edit
+    if (message.userId !== userId) {
+      throw new Error("Not authorized to edit this message");
+    }
+
+    // Can't edit deleted messages
+    if (message.isDeleted) {
+      throw new Error("Cannot edit a deleted message");
+    }
+
+    const content = args.content.trim();
+    if (!content) throw new Error("Message cannot be empty");
+
+    await ctx.db.patch(args.id, {
+      content,
+      editedAt: Date.now(),
+    });
+  },
+});
+
+export const remove = mutation({
+  args: {
+    id: v.id("messages"),
+  },
+  handler: async (ctx, args) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) throw new Error("Not authenticated");
+
+    const message = await ctx.db.get(args.id);
+    if (!message) throw new Error("Message not found");
+
+    const board = await ctx.db.get(message.boardId);
+    if (!board) throw new Error("Board not found");
+
+    // Allow deletion if user is message author or board owner
+    if (message.userId !== userId && board.ownerId !== userId) {
+      throw new Error("Not authorized to delete this message");
+    }
+
+    // Soft delete - keep the record to show "message deleted" placeholder
+    await ctx.db.patch(args.id, { isDeleted: true });
+  },
+});
+
+export const search = query({
+  args: {
+    boardId: v.id("boards"),
+    query: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) return [];
+
+    const board = await ctx.db.get(args.boardId);
+    if (!board) return [];
+
+    // Check if user is a member
+    if (board.ownerId !== userId && !board.memberIds.includes(userId)) {
+      return [];
+    }
+
+    const searchQuery = args.query.trim();
+    if (!searchQuery) return [];
+
+    const results = await ctx.db
+      .query("messages")
+      .withSearchIndex("search_content", (q) =>
+        q.search("content", searchQuery).eq("boardId", args.boardId)
+      )
+      .take(50);
+
+    // Filter out deleted messages and get user info
+    const messagesWithUsers = await Promise.all(
+      results
+        .filter((m) => !m.isDeleted)
+        .map(async (message) => {
+          const user = await ctx.db.get(message.userId);
+          if (!user) return null;
+
+          let image: string | undefined = user.image;
+          if (image?.startsWith("storage:")) {
+            const storageId = image.replace("storage:", "") as any;
+            image = (await ctx.storage.getUrl(storageId)) ?? undefined;
+          }
+
+          return {
+            ...message,
+            user: { _id: user._id, name: user.name, email: user.email, image },
+          };
+        })
+    );
+
+    return messagesWithUsers.filter((m) => m !== null);
+  },
+});
+
 export const markAsRead = mutation({
   args: {
     boardId: v.id("boards"),

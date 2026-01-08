@@ -46,7 +46,17 @@ export const get = query({
       return null;
     }
 
-    return board;
+    // Resolve storage URL for background image if present
+    let background = board.background;
+    if (background?.type === "image" && background.value.startsWith("storage:")) {
+      const storageId = background.value.replace("storage:", "") as any;
+      const url = await ctx.storage.getUrl(storageId);
+      if (url) {
+        background = { ...background, value: url };
+      }
+    }
+
+    return { ...board, background };
   },
 });
 
@@ -320,5 +330,37 @@ export const reorder = mutation({
 
       await ctx.db.patch(args.boardIds[i], { order: i });
     }
+  },
+});
+
+export const updateBackground = mutation({
+  args: {
+    id: v.id("boards"),
+    background: v.optional(
+      v.object({
+        type: v.union(v.literal("color"), v.literal("gradient"), v.literal("image")),
+        value: v.string(),
+        overlay: v.optional(v.number()),
+      })
+    ),
+  },
+  handler: async (ctx, args) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) throw new Error("Not authenticated");
+
+    const board = await ctx.db.get(args.id);
+    if (!board) throw new Error("Board not found");
+    if (board.ownerId !== userId) throw new Error("Only owner can change background");
+
+    await ctx.db.patch(args.id, { background: args.background });
+  },
+});
+
+export const generateBackgroundUploadUrl = mutation({
+  args: {},
+  handler: async (ctx) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) throw new Error("Not authenticated");
+    return await ctx.storage.generateUploadUrl();
   },
 });

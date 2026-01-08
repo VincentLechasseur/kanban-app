@@ -17,6 +17,10 @@ import {
   X,
   GripHorizontal,
   Users,
+  Pencil,
+  Trash2,
+  Search,
+  Check,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -41,9 +45,16 @@ export function BoardChat({ boardId, state, onStateChange }: BoardChatProps) {
   const hasUnread = useQuery(api.messages.hasUnread, { boardId });
   const sendMessage = useMutation(api.messages.send);
   const markAsRead = useMutation(api.messages.markAsRead);
+  const updateMessage = useMutation(api.messages.update);
+  const deleteMessage = useMutation(api.messages.remove);
   const createChatMentionNotification = useMutation(
     api.notifications.createChatMentionNotification
   );
+
+  // Typing indicator
+  const typingUsers = useQuery(api.typing.getTyping, { boardId });
+  const setTyping = useMutation(api.typing.setTyping);
+  const clearTyping = useMutation(api.typing.clearTyping);
 
   const [content, setContent] = useState("");
   const [isSending, setIsSending] = useState(false);
@@ -51,6 +62,21 @@ export function BoardChat({ boardId, state, onStateChange }: BoardChatProps) {
   const [mentionSearch, setMentionSearch] = useState("");
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [selectedCard, setSelectedCard] = useState<Doc<"cards"> | null>(null);
+
+  // Edit/delete state
+  const [editingMessageId, setEditingMessageId] = useState<Id<"messages"> | null>(null);
+  const [editContent, setEditContent] = useState("");
+
+  // Search state
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const searchResults = useQuery(
+    api.messages.search,
+    searchQuery.trim() ? { boardId, query: searchQuery } : "skip"
+  );
+
+  // Typing indicator debounce
+  const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [height, setHeight] = useState(() => {
     if (typeof window === "undefined") return DEFAULT_HEIGHT;
     return parseInt(localStorage.getItem(STORAGE_KEY) ?? String(DEFAULT_HEIGHT));
@@ -212,6 +238,7 @@ export function BoardChat({ boardId, state, onStateChange }: BoardChatProps) {
 
       setContent("");
       setMentionType(null);
+      clearTyping({ boardId });
       inputRef.current?.focus();
     } catch (error) {
       console.error("Failed to send message:", error);
@@ -220,9 +247,55 @@ export function BoardChat({ boardId, state, onStateChange }: BoardChatProps) {
     }
   };
 
+  // Edit message handlers
+  const startEditing = (messageId: Id<"messages">, currentContent: string) => {
+    setEditingMessageId(messageId);
+    setEditContent(currentContent);
+  };
+
+  const cancelEditing = () => {
+    setEditingMessageId(null);
+    setEditContent("");
+  };
+
+  const saveEdit = async () => {
+    if (!editingMessageId || !editContent.trim()) return;
+    try {
+      await updateMessage({ id: editingMessageId, content: editContent.trim() });
+      setEditingMessageId(null);
+      setEditContent("");
+    } catch (error) {
+      console.error("Failed to update message:", error);
+    }
+  };
+
+  const handleDelete = async (messageId: Id<"messages">) => {
+    try {
+      await deleteMessage({ id: messageId });
+    } catch (error) {
+      console.error("Failed to delete message:", error);
+    }
+  };
+
+  // Trigger typing indicator
+  const triggerTyping = useCallback(() => {
+    if (typingTimeoutRef.current) {
+      clearTimeout(typingTimeoutRef.current);
+    }
+    setTyping({ boardId });
+    typingTimeoutRef.current = setTimeout(() => {
+      clearTyping({ boardId });
+    }, 3000);
+  }, [boardId, setTyping, clearTyping]);
+
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
     setContent(value);
+
+    // Trigger typing indicator
+    if (value.trim()) {
+      triggerTyping();
+    }
 
     const cursorPos = e.target.selectionStart ?? value.length;
     const textBeforeCursor = value.slice(0, cursorPos);
@@ -504,6 +577,24 @@ export function BoardChat({ boardId, state, onStateChange }: BoardChatProps) {
                       className="h-7 w-7"
                       onClick={(e) => {
                         e.stopPropagation();
+                        setSearchOpen(!searchOpen);
+                      }}
+                    >
+                      <Search className="h-4 w-4" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>Search messages</TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-7 w-7"
+                      onClick={(e) => {
+                        e.stopPropagation();
                         onStateChange("minimized");
                       }}
                     >
@@ -534,6 +625,68 @@ export function BoardChat({ boardId, state, onStateChange }: BoardChatProps) {
             </div>
           </div>
 
+          {/* Search Panel */}
+          {searchOpen && (
+            <div className="bg-muted/30 shrink-0 border-b p-3">
+              <div className="flex gap-2">
+                <Input
+                  placeholder="Search messages..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="h-8"
+                  autoFocus
+                />
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8 shrink-0"
+                  onClick={() => {
+                    setSearchOpen(false);
+                    setSearchQuery("");
+                  }}
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
+              {searchQuery.trim() && (
+                <div className="mt-2 max-h-48 overflow-y-auto">
+                  {searchResults === undefined ? (
+                    <div className="flex items-center justify-center py-2">
+                      <div className="border-primary h-4 w-4 animate-spin rounded-full border-2 border-t-transparent" />
+                    </div>
+                  ) : searchResults.length === 0 ? (
+                    <p className="text-muted-foreground py-2 text-center text-sm">
+                      No messages found
+                    </p>
+                  ) : (
+                    <div className="space-y-1">
+                      {searchResults.map((result) => (
+                        <div
+                          key={result._id}
+                          className="bg-background hover:bg-accent cursor-pointer rounded-md p-2 text-sm"
+                          onClick={() => {
+                            setSearchOpen(false);
+                            setSearchQuery("");
+                            // Scroll to message would require refs - for now just close search
+                          }}
+                        >
+                          <div className="text-muted-foreground mb-1 flex items-center gap-2 text-xs">
+                            <span className="font-medium">
+                              {result.user?.name ?? result.user?.email}
+                            </span>
+                            <span>·</span>
+                            <span>{formatDate(result.createdAt)}</span>
+                          </div>
+                          <p className="truncate">{result.content}</p>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+
           {/* Messages Area */}
           <div ref={scrollContainerRef} className="flex-1 overflow-y-auto px-4">
             {messages === undefined ? (
@@ -558,10 +711,13 @@ export function BoardChat({ boardId, state, onStateChange }: BoardChatProps) {
                     <div className="space-y-3">
                       {group.messages.map((message) => {
                         const isOwn = message.userId === currentUser?._id;
+                        const isEditing = editingMessageId === message._id;
+                        const isDeleted = message.isDeleted;
+
                         return (
                           <div
                             key={message._id}
-                            className={`flex gap-2 ${isOwn ? "flex-row-reverse" : ""}`}
+                            className={`group flex gap-2 ${isOwn ? "flex-row-reverse" : ""}`}
                           >
                             <UserAvatar
                               userId={message.user._id}
@@ -574,18 +730,92 @@ export function BoardChat({ boardId, state, onStateChange }: BoardChatProps) {
                             <div
                               className={`flex max-w-[70%] flex-col ${isOwn ? "items-end" : ""}`}
                             >
-                              <div
-                                className={`rounded-lg px-3 py-2 ${
-                                  isOwn ? "bg-primary text-primary-foreground" : "bg-muted"
-                                }`}
-                              >
-                                <p className="text-sm break-words whitespace-pre-wrap">
-                                  {renderMessageContent(message.content, isOwn)}
-                                </p>
-                              </div>
-                              <span className="text-muted-foreground mt-1 text-xs">
-                                {formatTime(message.createdAt)}
-                              </span>
+                              {isDeleted ? (
+                                <div className="bg-muted/50 rounded-lg border border-dashed px-3 py-2">
+                                  <p className="text-muted-foreground text-sm italic">
+                                    This message was deleted
+                                  </p>
+                                </div>
+                              ) : isEditing ? (
+                                <div className="flex flex-col gap-2">
+                                  <Input
+                                    value={editContent}
+                                    onChange={(e) => setEditContent(e.target.value)}
+                                    onKeyDown={(e) => {
+                                      if (e.key === "Enter") {
+                                        e.preventDefault();
+                                        saveEdit();
+                                      } else if (e.key === "Escape") {
+                                        cancelEditing();
+                                      }
+                                    }}
+                                    className="h-8 text-sm"
+                                    autoFocus
+                                  />
+                                  <div className="flex gap-1">
+                                    <Button
+                                      size="sm"
+                                      variant="ghost"
+                                      className="h-6 px-2"
+                                      onClick={cancelEditing}
+                                    >
+                                      Cancel
+                                    </Button>
+                                    <Button
+                                      size="sm"
+                                      className="h-6 px-2"
+                                      onClick={saveEdit}
+                                      disabled={!editContent.trim()}
+                                    >
+                                      <Check className="mr-1 h-3 w-3" />
+                                      Save
+                                    </Button>
+                                  </div>
+                                </div>
+                              ) : (
+                                <div className="relative">
+                                  <div
+                                    className={`rounded-lg px-3 py-2 ${
+                                      isOwn ? "bg-primary text-primary-foreground" : "bg-muted"
+                                    }`}
+                                  >
+                                    <p className="text-sm break-words whitespace-pre-wrap">
+                                      {renderMessageContent(message.content, isOwn)}
+                                    </p>
+                                  </div>
+                                  {/* Edit/Delete buttons - show on hover for own messages */}
+                                  {isOwn && (
+                                    <div
+                                      className={`absolute top-1/2 -left-16 flex -translate-y-1/2 gap-0.5 opacity-0 transition-opacity group-hover:opacity-100`}
+                                    >
+                                      <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        className="h-6 w-6"
+                                        onClick={() => startEditing(message._id, message.content)}
+                                      >
+                                        <Pencil className="h-3 w-3" />
+                                      </Button>
+                                      <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        className="hover:text-destructive h-6 w-6"
+                                        onClick={() => handleDelete(message._id)}
+                                      >
+                                        <Trash2 className="h-3 w-3" />
+                                      </Button>
+                                    </div>
+                                  )}
+                                </div>
+                              )}
+                              {!isDeleted && !isEditing && (
+                                <span className="text-muted-foreground mt-1 text-xs">
+                                  {formatTime(message.createdAt)}
+                                  {message.editedAt && (
+                                    <span className="ml-1 italic">(edited)</span>
+                                  )}
+                                </span>
+                              )}
                             </div>
                           </div>
                         );
@@ -599,6 +829,30 @@ export function BoardChat({ boardId, state, onStateChange }: BoardChatProps) {
 
           {/* Input Area */}
           <div className="shrink-0 border-t p-4">
+            {/* Typing indicator */}
+            {typingUsers && typingUsers.length > 0 && (
+              <div className="text-muted-foreground mb-2 flex items-center gap-2 text-sm">
+                <div className="flex gap-1">
+                  <span className="animate-bounce" style={{ animationDelay: "0ms" }}>
+                    •
+                  </span>
+                  <span className="animate-bounce" style={{ animationDelay: "150ms" }}>
+                    •
+                  </span>
+                  <span className="animate-bounce" style={{ animationDelay: "300ms" }}>
+                    •
+                  </span>
+                </div>
+                <span>
+                  {typingUsers.length === 1
+                    ? `${typingUsers[0].name ?? typingUsers[0].email} is typing...`
+                    : typingUsers.length === 2
+                      ? `${typingUsers[0].name ?? typingUsers[0].email} and ${typingUsers[1].name ?? typingUsers[1].email} are typing...`
+                      : `${typingUsers.length} people are typing...`}
+                </span>
+              </div>
+            )}
+
             {/* Mention suggestions popup */}
             {mentionType && suggestions.length > 0 && (
               <div className="bg-popover mb-2 max-h-48 overflow-y-auto rounded-md border p-1 shadow-md">

@@ -1,4 +1,5 @@
 import { mutation, query } from "./_generated/server";
+import { internal } from "./_generated/api";
 import { getAuthUserId } from "@convex-dev/auth/server";
 import { v } from "convex/values";
 
@@ -47,11 +48,24 @@ export const create = mutation({
 
     const maxOrder = columns.reduce((max, col) => Math.max(max, col.order), -1);
 
-    return await ctx.db.insert("columns", {
+    const columnId = await ctx.db.insert("columns", {
       boardId: args.boardId,
       name: args.name,
       order: maxOrder + 1,
     });
+
+    // Log activity
+    await ctx.runMutation(internal.activities.log, {
+      boardId: args.boardId,
+      userId,
+      type: "column_created",
+      columnId,
+      metadata: {
+        columnName: args.name,
+      },
+    });
+
+    return columnId;
   },
 });
 
@@ -93,6 +107,16 @@ export const remove = mutation({
     if (board.ownerId !== userId && !board.memberIds.includes(userId)) {
       throw new Error("Not authorized");
     }
+
+    // Log activity before deleting
+    await ctx.runMutation(internal.activities.log, {
+      boardId: column.boardId,
+      userId,
+      type: "column_deleted",
+      metadata: {
+        columnName: column.name,
+      },
+    });
 
     // Delete all cards in this column
     const cards = await ctx.db

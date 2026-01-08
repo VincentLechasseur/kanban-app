@@ -14,6 +14,14 @@ export default defineSchema({
     isPublic: v.optional(v.boolean()),
     order: v.optional(v.number()),
     createdAt: v.number(),
+    // Board background customization
+    background: v.optional(
+      v.object({
+        type: v.union(v.literal("color"), v.literal("gradient"), v.literal("image")),
+        value: v.string(),
+        overlay: v.optional(v.number()),
+      })
+    ),
   })
     .index("by_owner", ["ownerId"])
     .index("by_member", ["memberIds"])
@@ -64,7 +72,15 @@ export default defineSchema({
     userId: v.id("users"),
     content: v.string(),
     createdAt: v.number(),
-  }).index("by_board", ["boardId", "createdAt"]),
+    // Edit/delete support
+    editedAt: v.optional(v.number()),
+    isDeleted: v.optional(v.boolean()),
+  })
+    .index("by_board", ["boardId", "createdAt"])
+    .searchIndex("search_content", {
+      searchField: "content",
+      filterFields: ["boardId"],
+    }),
 
   comments: defineTable({
     cardId: v.id("cards"),
@@ -94,4 +110,51 @@ export default defineSchema({
   })
     .index("by_user", ["userId", "createdAt"])
     .index("by_user_unread", ["userId", "read"]),
+
+  // Typing indicator status
+  typingStatus: defineTable({
+    boardId: v.id("boards"),
+    userId: v.id("users"),
+    expiresAt: v.number(),
+  }).index("by_board", ["boardId"]),
+
+  // Activity feed for board timeline
+  activities: defineTable({
+    boardId: v.id("boards"),
+    userId: v.id("users"),
+    type: v.union(
+      v.literal("card_created"),
+      v.literal("card_moved"),
+      v.literal("card_updated"),
+      v.literal("card_deleted"),
+      v.literal("card_assigned"),
+      v.literal("card_unassigned"),
+      v.literal("label_added"),
+      v.literal("label_removed"),
+      v.literal("column_created"),
+      v.literal("column_deleted"),
+      v.literal("member_added"),
+      v.literal("member_removed"),
+      v.literal("comment_added"),
+      v.literal("board_updated")
+    ),
+    cardId: v.optional(v.id("cards")),
+    columnId: v.optional(v.id("columns")),
+    targetUserId: v.optional(v.id("users")),
+    labelId: v.optional(v.id("labels")),
+    metadata: v.optional(
+      v.object({
+        cardTitle: v.optional(v.string()),
+        fromColumnName: v.optional(v.string()),
+        toColumnName: v.optional(v.string()),
+        columnName: v.optional(v.string()),
+        labelName: v.optional(v.string()),
+        targetUserName: v.optional(v.string()),
+        fieldChanged: v.optional(v.string()),
+      })
+    ),
+    createdAt: v.number(),
+  })
+    .index("by_board", ["boardId", "createdAt"])
+    .index("by_card", ["cardId", "createdAt"]),
 });

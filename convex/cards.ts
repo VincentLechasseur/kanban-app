@@ -1,4 +1,5 @@
 import { mutation, query } from "./_generated/server";
+import { internal } from "./_generated/api";
 import { getAuthUserId } from "@convex-dev/auth/server";
 import { v } from "convex/values";
 
@@ -71,7 +72,7 @@ export const create = mutation({
 
     const maxOrder = cards.reduce((max, card) => Math.max(max, card.order), -1);
 
-    return await ctx.db.insert("cards", {
+    const cardId = await ctx.db.insert("cards", {
       columnId: args.columnId,
       boardId: column.boardId,
       title: args.title,
@@ -82,6 +83,21 @@ export const create = mutation({
       createdAt: Date.now(),
       createdBy: userId,
     });
+
+    // Log activity
+    await ctx.runMutation(internal.activities.log, {
+      boardId: column.boardId,
+      userId,
+      type: "card_created",
+      cardId,
+      columnId: args.columnId,
+      metadata: {
+        cardTitle: args.title,
+        columnName: column.name,
+      },
+    });
+
+    return cardId;
   },
 });
 
@@ -142,6 +158,16 @@ export const remove = mutation({
       throw new Error("Not authorized");
     }
 
+    // Log activity before deleting
+    await ctx.runMutation(internal.activities.log, {
+      boardId: card.boardId,
+      userId,
+      type: "card_deleted",
+      metadata: {
+        cardTitle: card.title,
+      },
+    });
+
     await ctx.db.delete(args.id);
   },
 });
@@ -169,6 +195,10 @@ export const move = mutation({
     const sourceColumnId = card.columnId;
     const targetColumnId = args.targetColumnId;
 
+    // Get column names for activity logging
+    const sourceColumn = await ctx.db.get(sourceColumnId);
+    const targetColumn = await ctx.db.get(targetColumnId);
+
     // Get all cards in the target column
     const targetCards = await ctx.db
       .query("cards")
@@ -195,7 +225,7 @@ export const move = mutation({
       }
     }
 
-    // If moving between columns, reorder the source column
+    // If moving between columns, reorder the source column and log activity
     if (sourceColumnId !== targetColumnId) {
       const sourceCards = await ctx.db
         .query("cards")
@@ -211,6 +241,20 @@ export const move = mutation({
           await ctx.db.patch(remainingCards[i]._id, { order: i });
         }
       }
+
+      // Log activity for column change
+      await ctx.runMutation(internal.activities.log, {
+        boardId: card.boardId,
+        userId,
+        type: "card_moved",
+        cardId: args.cardId,
+        columnId: targetColumnId,
+        metadata: {
+          cardTitle: card.title,
+          fromColumnName: sourceColumn?.name,
+          toColumnName: targetColumn?.name,
+        },
+      });
     }
   },
 });
@@ -234,7 +278,45 @@ export const setAssignees = mutation({
       throw new Error("Not authorized");
     }
 
+    // Track changes for activity logging
+    const oldAssignees = new Set(card.assigneeIds);
+    const newAssignees = new Set(args.assigneeIds);
+
+    const added = args.assigneeIds.filter((id) => !oldAssignees.has(id));
+    const removed = card.assigneeIds.filter((id) => !newAssignees.has(id));
+
     await ctx.db.patch(args.cardId, { assigneeIds: args.assigneeIds });
+
+    // Log activities for each assignment change
+    for (const targetUserId of added) {
+      const targetUser = await ctx.db.get(targetUserId);
+      await ctx.runMutation(internal.activities.log, {
+        boardId: card.boardId,
+        userId,
+        type: "card_assigned",
+        cardId: args.cardId,
+        targetUserId,
+        metadata: {
+          cardTitle: card.title,
+          targetUserName: targetUser?.name ?? targetUser?.email,
+        },
+      });
+    }
+
+    for (const targetUserId of removed) {
+      const targetUser = await ctx.db.get(targetUserId);
+      await ctx.runMutation(internal.activities.log, {
+        boardId: card.boardId,
+        userId,
+        type: "card_unassigned",
+        cardId: args.cardId,
+        targetUserId,
+        metadata: {
+          cardTitle: card.title,
+          targetUserName: targetUser?.name ?? targetUser?.email,
+        },
+      });
+    }
   },
 });
 
@@ -257,6 +339,44 @@ export const setLabels = mutation({
       throw new Error("Not authorized");
     }
 
+    // Track changes for activity logging
+    const oldLabels = new Set(card.labelIds);
+    const newLabels = new Set(args.labelIds);
+
+    const added = args.labelIds.filter((id) => !oldLabels.has(id));
+    const removed = card.labelIds.filter((id) => !newLabels.has(id));
+
     await ctx.db.patch(args.cardId, { labelIds: args.labelIds });
+
+    // Log activities for each label change
+    for (const labelId of added) {
+      const label = await ctx.db.get(labelId);
+      await ctx.runMutation(internal.activities.log, {
+        boardId: card.boardId,
+        userId,
+        type: "label_added",
+        cardId: args.cardId,
+        labelId,
+        metadata: {
+          cardTitle: card.title,
+          labelName: label?.name,
+        },
+      });
+    }
+
+    for (const labelId of removed) {
+      const label = await ctx.db.get(labelId);
+      await ctx.runMutation(internal.activities.log, {
+        boardId: card.boardId,
+        userId,
+        type: "label_removed",
+        cardId: args.cardId,
+        labelId,
+        metadata: {
+          cardTitle: card.title,
+          labelName: label?.name,
+        },
+      });
+    }
   },
 });

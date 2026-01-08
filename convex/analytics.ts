@@ -1,0 +1,211 @@
+import { query } from "./_generated/server";
+import { getAuthUserId } from "@convex-dev/auth/server";
+import { v } from "convex/values";
+import type { Id } from "./_generated/dataModel";
+
+export const getBoardStats = query({
+  args: {
+    boardId: v.id("boards"),
+  },
+  handler: async (ctx, args) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) return null;
+
+    const board = await ctx.db.get(args.boardId);
+    if (!board) return null;
+
+    // Check if user is a member
+    if (board.ownerId !== userId && !board.memberIds.includes(userId)) {
+      return null;
+    }
+
+    // Get columns
+    const columns = await ctx.db
+      .query("columns")
+      .withIndex("by_board", (q) => q.eq("boardId", args.boardId))
+      .collect();
+
+    // Get cards
+    const cards = await ctx.db
+      .query("cards")
+      .withIndex("by_board", (q) => q.eq("boardId", args.boardId))
+      .collect();
+
+    // Cards per column
+    const cardsPerColumn = columns
+      .sort((a, b) => a.order - b.order)
+      .map((col) => ({
+        name: col.name,
+        count: cards.filter((c) => c.columnId === col._id).length,
+        columnId: col._id,
+      }));
+
+    // Cards by assignee
+    const assigneeCounts: Record<string, number> = {};
+    cards.forEach((card) => {
+      card.assigneeIds.forEach((id) => {
+        assigneeCounts[id] = (assigneeCounts[id] ?? 0) + 1;
+      });
+    });
+
+    // Unassigned cards
+    const unassignedCount = cards.filter((c) => c.assigneeIds.length === 0).length;
+
+    // Get user names for assignees
+    const assigneeStats = await Promise.all(
+      Object.entries(assigneeCounts).map(async ([id, count]) => {
+        const user = await ctx.db.get(id as Id<"users">);
+        return {
+          name: user?.name ?? user?.email ?? "Unknown",
+          count,
+          userId: id,
+        };
+      })
+    );
+
+    if (unassignedCount > 0) {
+      assigneeStats.push({
+        name: "Unassigned",
+        count: unassignedCount,
+        userId: "unassigned",
+      });
+    }
+
+    // Cards created over time (last 30 days)
+    const thirtyDaysAgo = Date.now() - 30 * 24 * 60 * 60 * 1000;
+    const cardsByDate: Record<string, number> = {};
+
+    cards.forEach((card) => {
+      if (card.createdAt >= thirtyDaysAgo) {
+        const date = new Date(card.createdAt).toISOString().split("T")[0];
+        cardsByDate[date] = (cardsByDate[date] ?? 0) + 1;
+      }
+    });
+
+    // Convert to array sorted by date
+    const cardsOverTime = Object.entries(cardsByDate)
+      .map(([date, count]) => ({ date, count }))
+      .sort((a, b) => a.date.localeCompare(b.date));
+
+    // Cards by label
+    const labels = await ctx.db
+      .query("labels")
+      .withIndex("by_board", (q) => q.eq("boardId", args.boardId))
+      .collect();
+
+    const labelCounts: Record<string, { name: string; color: string; count: number }> = {};
+    labels.forEach((label) => {
+      labelCounts[label._id] = { name: label.name, color: label.color, count: 0 };
+    });
+
+    cards.forEach((card) => {
+      card.labelIds.forEach((labelId) => {
+        if (labelCounts[labelId]) {
+          labelCounts[labelId].count++;
+        }
+      });
+    });
+
+    const labelStats = Object.values(labelCounts).filter((l) => l.count > 0);
+
+    // Due date stats
+    const now = Date.now();
+    const overdue = cards.filter((c) => c.dueDate && c.dueDate < now).length;
+    const dueThisWeek = cards.filter((c) => {
+      if (!c.dueDate) return false;
+      const weekFromNow = now + 7 * 24 * 60 * 60 * 1000;
+      return c.dueDate >= now && c.dueDate <= weekFromNow;
+    }).length;
+    const noDueDate = cards.filter((c) => !c.dueDate).length;
+
+    return {
+      totalCards: cards.length,
+      totalColumns: columns.length,
+      cardsPerColumn,
+      assigneeStats,
+      cardsOverTime,
+      labelStats,
+      dueDateStats: {
+        overdue,
+        dueThisWeek,
+        noDueDate,
+      },
+    };
+  },
+});
+
+export const getVelocity = query({
+  args: {
+    boardId: v.id("boards"),
+    weeks: v.optional(v.number()),
+  },
+  handler: async (ctx, args) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) return [];
+
+    const board = await ctx.db.get(args.boardId);
+    if (!board) return [];
+
+    // Check if user is a member
+    if (board.ownerId !== userId && !board.memberIds.includes(userId)) {
+      return [];
+    }
+
+    const numWeeks = args.weeks ?? 8;
+    const now = Date.now();
+    const msPerWeek = 7 * 24 * 60 * 60 * 1000;
+
+    // Get card_moved activities to last column (typically "Done")
+    const activities = await ctx.db
+      .query("activities")
+      .withIndex("by_board", (q) => q.eq("boardId", args.boardId))
+      .filter((q) =>
+        q.and(
+          q.eq(q.field("type"), "card_moved"),
+          q.gte(q.field("createdAt"), now - numWeeks * msPerWeek)
+        )
+      )
+      .collect();
+
+    // Get columns to find "Done" column
+    const columns = await ctx.db
+      .query("columns")
+      .withIndex("by_board", (q) => q.eq("boardId", args.boardId))
+      .collect();
+
+    const doneColumn = columns.find(
+      (c) => c.name.toLowerCase() === "done" || c.name.toLowerCase() === "completed"
+    );
+
+    // Group completed cards by week
+    const weeklyData: Record<string, number> = {};
+
+    for (let i = 0; i < numWeeks; i++) {
+      const weekStart = now - (i + 1) * msPerWeek;
+      const weekEnd = now - i * msPerWeek;
+      const weekLabel = new Date(weekEnd).toLocaleDateString("en-US", {
+        month: "short",
+        day: "numeric",
+      });
+
+      // Count activities that moved cards to Done column
+      const completed = activities.filter((a) => {
+        if (a.createdAt < weekStart || a.createdAt >= weekEnd) return false;
+        if (doneColumn && a.metadata?.toColumnName) {
+          return (
+            a.metadata.toColumnName.toLowerCase() === "done" ||
+            a.metadata.toColumnName.toLowerCase() === "completed"
+          );
+        }
+        return false;
+      }).length;
+
+      weeklyData[weekLabel] = completed;
+    }
+
+    // Convert to array in chronological order
+    return Object.entries(weeklyData)
+      .reverse()
+      .map(([week, completed]) => ({ week, completed }));
+  },
+});

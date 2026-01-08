@@ -8,6 +8,8 @@
  * @module
  */
 
+import type * as activities from "../activities.js";
+import type * as analytics from "../analytics.js";
 import type * as auth from "../auth.js";
 import type * as boards from "../boards.js";
 import type * as cards from "../cards.js";
@@ -16,8 +18,10 @@ import type * as comments from "../comments.js";
 import type * as http from "../http.js";
 import type * as joinRequests from "../joinRequests.js";
 import type * as labels from "../labels.js";
+import type * as lib_auth from "../lib/auth.js";
 import type * as messages from "../messages.js";
 import type * as notifications from "../notifications.js";
+import type * as typing from "../typing.js";
 import type * as users from "../users.js";
 
 import type {
@@ -27,6 +31,8 @@ import type {
 } from "convex/server";
 
 declare const fullApi: ApiFromModules<{
+  activities: typeof activities;
+  analytics: typeof analytics;
   auth: typeof auth;
   boards: typeof boards;
   cards: typeof cards;
@@ -35,8 +41,10 @@ declare const fullApi: ApiFromModules<{
   http: typeof http;
   joinRequests: typeof joinRequests;
   labels: typeof labels;
+  "lib/auth": typeof lib_auth;
   messages: typeof messages;
   notifications: typeof notifications;
+  typing: typeof typing;
   users: typeof users;
 }>;
 
