@@ -628,7 +628,7 @@ export function BoardPage() {
 
       {/* Activity Feed Modal */}
       <Dialog open={activityOpen} onOpenChange={setActivityOpen}>
-        <DialogContent className="flex h-[85vh] max-w-4xl flex-col">
+        <DialogContent className="flex h-[85vh] w-full !max-w-4xl flex-col">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Activity className="h-5 w-5" />
@@ -644,7 +644,7 @@ export function BoardPage() {
 
       {/* Analytics Modal */}
       <Dialog open={analyticsOpen} onOpenChange={setAnalyticsOpen}>
-        <DialogContent className="flex h-[95vh] w-[95vw] max-w-none flex-col">
+        <DialogContent className="flex h-[95vh] w-[95vw] !max-w-[95vw] flex-col">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <BarChart3 className="h-5 w-5" />
