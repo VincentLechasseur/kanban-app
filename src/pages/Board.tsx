@@ -644,7 +644,7 @@ export function BoardPage() {
 
       {/* Analytics Modal */}
       <Dialog open={analyticsOpen} onOpenChange={setAnalyticsOpen}>
-        <DialogContent className="flex h-[90vh] max-w-6xl flex-col">
+        <DialogContent className="flex h-[95vh] w-[95vw] max-w-none flex-col">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <BarChart3 className="h-5 w-5" />
