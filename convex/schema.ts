@@ -47,6 +47,11 @@ export default defineSchema({
     assigneeIds: v.array(v.id("users")),
     labelIds: v.array(v.id("labels")),
     dueDate: v.optional(v.number()),
+    // Story points for velocity tracking
+    storyPoints: v.optional(v.number()),
+    // Time tracking in minutes
+    timeEstimate: v.optional(v.number()),
+    timeSpent: v.optional(v.number()),
     createdAt: v.number(),
     createdBy: v.id("users"),
   })

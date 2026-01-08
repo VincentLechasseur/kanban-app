@@ -140,6 +140,37 @@ export const getBoardStats = query({
     }).length;
     const noDueDate = cards.filter((c) => !c.dueDate).length;
 
+    // Story points stats
+    const totalStoryPoints = cards.reduce((sum, c) => sum + (c.storyPoints ?? 0), 0);
+    const cardsWithPoints = cards.filter((c) => c.storyPoints).length;
+
+    // Time tracking stats
+    const totalTimeEstimate = cards.reduce((sum, c) => sum + (c.timeEstimate ?? 0), 0);
+    const totalTimeSpent = cards.reduce((sum, c) => sum + (c.timeSpent ?? 0), 0);
+    const cardsWithTime = cards.filter((c) => c.timeEstimate || c.timeSpent).length;
+
+    // Story points by column type
+    const storyPointsByType = {
+      backlog: 0,
+      todo: 0,
+      in_progress: 0,
+      review: 0,
+      blocked: 0,
+      done: 0,
+      wont_do: 0,
+      unset: 0,
+    };
+
+    cards.forEach((card) => {
+      const column = columns.find((c) => c._id === card.columnId);
+      const points = card.storyPoints ?? 0;
+      if (column?.type) {
+        storyPointsByType[column.type] += points;
+      } else {
+        storyPointsByType.unset += points;
+      }
+    });
+
     return {
       totalCards: cards.length,
       totalColumns: columns.length,
@@ -152,6 +183,17 @@ export const getBoardStats = query({
         overdue,
         dueThisWeek,
         noDueDate,
+      },
+      storyPointsStats: {
+        total: totalStoryPoints,
+        cardsWithPoints,
+        byType: storyPointsByType,
+        completed: storyPointsByType.done,
+      },
+      timeStats: {
+        totalEstimate: totalTimeEstimate,
+        totalSpent: totalTimeSpent,
+        cardsWithTime,
       },
     };
   },

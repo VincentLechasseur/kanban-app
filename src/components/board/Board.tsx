@@ -11,10 +11,10 @@ import {
   type DragStartEvent,
   type DragEndEvent,
 } from "@dnd-kit/core";
-import { SortableContext, horizontalListSortingStrategy } from "@dnd-kit/sortable";
+import { SortableContext, horizontalListSortingStrategy, arrayMove } from "@dnd-kit/sortable";
 import { api } from "../../../convex/_generated/api";
 import type { Id, Doc } from "../../../convex/_generated/dataModel";
-import { Column } from "./Column";
+import { SortableColumn, Column } from "./Column";
 import { KanbanCard } from "./Card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -33,8 +33,10 @@ export function Board({ boardId, searchQuery = "", selectedAssigneeIds }: BoardP
   const cards = useQuery(api.cards.listByBoard, { boardId });
   const createColumn = useMutation(api.columns.create);
   const moveCard = useMutation(api.cards.move);
+  const reorderColumns = useMutation(api.columns.reorder);
 
   const [activeCard, setActiveCard] = useState<Doc<"cards"> | null>(null);
+  const [activeColumn, setActiveColumn] = useState<Doc<"columns"> | null>(null);
   const [isAddingColumn, setIsAddingColumn] = useState(false);
   const [newColumnName, setNewColumnName] = useState("");
 
@@ -85,6 +87,15 @@ export function Board({ boardId, searchQuery = "", selectedAssigneeIds }: BoardP
 
   const handleDragStart = (event: DragStartEvent) => {
     const { active } = event;
+
+    // Check if dragging a column
+    const column = columns?.find((c) => c._id === active.id);
+    if (column) {
+      setActiveColumn(column);
+      return;
+    }
+
+    // Otherwise it's a card
     const card = cards?.find((c) => c._id === active.id);
     if (card) {
       setActiveCard(card);
@@ -93,6 +104,30 @@ export function Board({ boardId, searchQuery = "", selectedAssigneeIds }: BoardP
 
   const handleDragEnd = async (event: DragEndEvent) => {
     const { active, over } = event;
+
+    // Handle column reorder
+    if (activeColumn) {
+      setActiveColumn(null);
+      if (!over || !columns) return;
+
+      const oldIndex = columns.findIndex((c) => c._id === active.id);
+      const newIndex = columns.findIndex((c) => c._id === over.id);
+
+      if (oldIndex !== newIndex && newIndex >= 0) {
+        const newOrder = arrayMove(columns, oldIndex, newIndex);
+        try {
+          await reorderColumns({
+            boardId,
+            columnIds: newOrder.map((c) => c._id),
+          });
+        } catch {
+          toast.error("Failed to reorder columns");
+        }
+      }
+      return;
+    }
+
+    // Handle card move
     setActiveCard(null);
 
     if (!over || !cards || !columns) return;
@@ -100,8 +135,8 @@ export function Board({ boardId, searchQuery = "", selectedAssigneeIds }: BoardP
     const activeId = active.id as string;
     const overId = over.id as string;
 
-    const activeCard = cards.find((c) => c._id === activeId);
-    if (!activeCard) return;
+    const draggedCard = cards.find((c) => c._id === activeId);
+    if (!draggedCard) return;
 
     // Check if dropping on a column
     const targetColumn = columns.find((c) => c._id === overId);
@@ -110,7 +145,7 @@ export function Board({ boardId, searchQuery = "", selectedAssigneeIds }: BoardP
       const columnCards = cardsByColumn[targetColumn._id] || [];
       try {
         await moveCard({
-          cardId: activeCard._id,
+          cardId: draggedCard._id,
           targetColumnId: targetColumn._id,
           newOrder: columnCards.length,
         });
@@ -125,14 +160,14 @@ export function Board({ boardId, searchQuery = "", selectedAssigneeIds }: BoardP
     if (overCard) {
       const targetColumnId = overCard.columnId;
       const targetColumnCards = (cardsByColumn[targetColumnId] || []).filter(
-        (c) => c._id !== activeCard._id
+        (c) => c._id !== draggedCard._id
       );
       const overIndex = targetColumnCards.findIndex((c) => c._id === overId);
       const newOrder = overIndex >= 0 ? overIndex : targetColumnCards.length;
 
       try {
         await moveCard({
-          cardId: activeCard._id,
+          cardId: draggedCard._id,
           targetColumnId: targetColumnId,
           newOrder,
         });
@@ -174,7 +209,11 @@ export function Board({ boardId, searchQuery = "", selectedAssigneeIds }: BoardP
             strategy={horizontalListSortingStrategy}
           >
             {columns.map((column) => (
-              <Column key={column._id} column={column} cards={cardsByColumn[column._id] || []} />
+              <SortableColumn
+                key={column._id}
+                column={column}
+                cards={cardsByColumn[column._id] || []}
+              />
             ))}
           </SortableContext>
 
@@ -228,6 +267,9 @@ export function Board({ boardId, searchQuery = "", selectedAssigneeIds }: BoardP
 
       <DragOverlay>
         {activeCard && <KanbanCard card={activeCard} boardId={boardId} isDragging />}
+        {activeColumn && (
+          <Column column={activeColumn} cards={cardsByColumn[activeColumn._id] || []} isDragging />
+        )}
       </DragOverlay>
     </DndContext>
   );

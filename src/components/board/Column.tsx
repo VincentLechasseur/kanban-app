@@ -1,12 +1,14 @@
 import { useState } from "react";
 import { useMutation } from "convex/react";
 import { useDroppable } from "@dnd-kit/core";
-import { SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable";
+import { SortableContext, verticalListSortingStrategy, useSortable } from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 import { api } from "../../../convex/_generated/api";
 import type { Doc } from "../../../convex/_generated/dataModel";
 import { KanbanCard } from "./Card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { GripVertical } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -67,9 +69,37 @@ type ColumnType = keyof typeof COLUMN_TYPES;
 interface ColumnProps {
   column: Doc<"columns">;
   cards: Doc<"cards">[];
+  isDragging?: boolean;
 }
 
-export function Column({ column, cards }: ColumnProps) {
+// Sortable wrapper for column
+export function SortableColumn({ column, cards }: ColumnProps) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id: column._id,
+  });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+  };
+
+  return (
+    <div ref={setNodeRef} style={style} className={cn(isDragging && "opacity-50")}>
+      <Column
+        column={column}
+        cards={cards}
+        isDragging={isDragging}
+        dragHandleProps={{ ...attributes, ...listeners }}
+      />
+    </div>
+  );
+}
+
+interface ColumnInternalProps extends ColumnProps {
+  dragHandleProps?: Record<string, unknown>;
+}
+
+export function Column({ column, cards, isDragging, dragHandleProps }: ColumnInternalProps) {
   const updateColumn = useMutation(api.columns.update);
   const deleteColumn = useMutation(api.columns.remove);
   const createCard = useMutation(api.cards.create);
@@ -141,11 +171,21 @@ export function Column({ column, cards }: ColumnProps) {
     <div
       className={cn(
         "bg-card flex h-full w-72 shrink-0 flex-col rounded-lg border",
-        isOver && "ring-primary ring-2"
+        isOver && "ring-primary ring-2",
+        isDragging && "shadow-xl"
       )}
     >
       {/* Column Header */}
       <div className="flex items-center justify-between border-b p-3">
+        {/* Drag Handle */}
+        {dragHandleProps && (
+          <div
+            {...dragHandleProps}
+            className="text-muted-foreground hover:text-foreground mr-1 -ml-1 cursor-grab active:cursor-grabbing"
+          >
+            <GripVertical className="h-4 w-4" />
+          </div>
+        )}
         {isEditing ? (
           <Input
             autoFocus

@@ -10,7 +10,15 @@ import { CardModal } from "./CardModal";
 import { UserAvatar } from "@/components/UserAvatar";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
-import { Calendar } from "lucide-react";
+import { Calendar, Clock, Zap } from "lucide-react";
+
+// Format minutes to hours/minutes string
+function formatTime(minutes: number): string {
+  if (minutes < 60) return `${minutes}m`;
+  const hours = Math.floor(minutes / 60);
+  const mins = minutes % 60;
+  return mins > 0 ? `${hours}h ${mins}m` : `${hours}h`;
+}
 
 interface KanbanCardProps {
   card: Doc<"cards">;
@@ -101,9 +109,39 @@ export function KanbanCard({ card, boardId, isDragging }: KanbanCardProps) {
             <p className="text-muted-foreground mt-1 line-clamp-2 text-xs">{card.description}</p>
           )}
 
+          {/* Story Points & Time */}
+          {(card.storyPoints || card.timeEstimate || card.timeSpent) && (
+            <div className="mt-2 flex flex-wrap gap-1.5">
+              {card.storyPoints && (
+                <Badge
+                  variant="secondary"
+                  className="bg-indigo-100 text-xs text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-400"
+                >
+                  <Zap className="mr-1 h-3 w-3" />
+                  {card.storyPoints} SP
+                </Badge>
+              )}
+              {(card.timeEstimate || card.timeSpent) && (
+                <Badge
+                  variant="secondary"
+                  className={cn(
+                    "text-xs",
+                    card.timeSpent && card.timeEstimate && card.timeSpent > card.timeEstimate
+                      ? "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"
+                      : "bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300"
+                  )}
+                >
+                  <Clock className="mr-1 h-3 w-3" />
+                  {card.timeSpent ? formatTime(card.timeSpent) : "0m"}
+                  {card.timeEstimate && ` / ${formatTime(card.timeEstimate)}`}
+                </Badge>
+              )}
+            </div>
+          )}
+
           {/* Footer */}
           {(card.dueDate || (assignees && assignees.length > 0)) && (
-            <div className="mt-3 flex items-center justify-between">
+            <div className="mt-2 flex items-center justify-between">
               {/* Due date */}
               {card.dueDate && (
                 <Badge

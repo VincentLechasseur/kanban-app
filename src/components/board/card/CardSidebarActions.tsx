@@ -7,8 +7,12 @@ import { UserAvatar } from "@/components/UserAvatar";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { CalendarIcon, Check, Palette, Tag, User, X } from "lucide-react";
+import { CalendarIcon, Check, Clock, Palette, Tag, User, X, Zap } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
+
+const STORY_POINTS = [0.5, 1, 2, 3, 5, 8, 13, 21];
 
 const CARD_COLORS = [
   { name: "None", value: null, color: "transparent" },
@@ -43,6 +47,10 @@ export function CardSidebarActions({ card, labels, members }: CardSidebarActions
   const [assigneesOpen, setAssigneesOpen] = useState(false);
   const [dateOpen, setDateOpen] = useState(false);
   const [colorOpen, setColorOpen] = useState(false);
+  const [pointsOpen, setPointsOpen] = useState(false);
+  const [timeOpen, setTimeOpen] = useState(false);
+  const [timeEstimate, setTimeEstimate] = useState(card.timeEstimate ?? 0);
+  const [timeSpent, setTimeSpent] = useState(card.timeSpent ?? 0);
 
   const handleToggleLabel = async (labelId: Id<"labels">) => {
     const newLabelIds = card.labelIds.includes(labelId)
@@ -87,6 +95,32 @@ export function CardSidebarActions({ card, labels, members }: CardSidebarActions
       setColorOpen(false);
     } catch {
       toast.error("Failed to update color");
+    }
+  };
+
+  const handleSetStoryPoints = async (points: number | null) => {
+    try {
+      await updateCard({
+        id: card._id,
+        storyPoints: points,
+      });
+      setPointsOpen(false);
+    } catch {
+      toast.error("Failed to update story points");
+    }
+  };
+
+  const handleSaveTime = async () => {
+    try {
+      await updateCard({
+        id: card._id,
+        timeEstimate: timeEstimate > 0 ? timeEstimate : null,
+        timeSpent: timeSpent > 0 ? timeSpent : null,
+      });
+      setTimeOpen(false);
+      toast.success("Time updated");
+    } catch {
+      toast.error("Failed to update time");
     }
   };
 
@@ -219,6 +253,97 @@ export function CardSidebarActions({ card, labels, members }: CardSidebarActions
                   {card.color === undefined && c.value === null && <Check className="h-4 w-4" />}
                 </button>
               ))}
+            </div>
+          </div>
+        </PopoverContent>
+      </Popover>
+
+      {/* Story Points */}
+      <Popover open={pointsOpen} onOpenChange={setPointsOpen}>
+        <PopoverTrigger asChild>
+          <Button variant="secondary" size="sm" className="w-full justify-start">
+            <Zap className="mr-2 h-4 w-4" />
+            {card.storyPoints !== undefined ? `${card.storyPoints} Story Points` : "Story Points"}
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent className="w-48" align="start">
+          <div className="space-y-2">
+            <p className="text-sm font-medium">Story Points</p>
+            <div className="grid grid-cols-4 gap-2">
+              {STORY_POINTS.map((points) => (
+                <button
+                  key={points}
+                  className={`hover:bg-primary hover:text-primary-foreground flex h-8 w-8 items-center justify-center rounded border text-sm font-medium transition-colors ${
+                    card.storyPoints === points ? "bg-primary text-primary-foreground" : ""
+                  }`}
+                  onClick={() => handleSetStoryPoints(points)}
+                >
+                  {points}
+                </button>
+              ))}
+            </div>
+            {card.storyPoints !== undefined && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="text-destructive w-full"
+                onClick={() => handleSetStoryPoints(null)}
+              >
+                <X className="mr-2 h-4 w-4" />
+                Clear
+              </Button>
+            )}
+          </div>
+        </PopoverContent>
+      </Popover>
+
+      {/* Time Tracking */}
+      <Popover open={timeOpen} onOpenChange={setTimeOpen}>
+        <PopoverTrigger asChild>
+          <Button variant="secondary" size="sm" className="w-full justify-start">
+            <Clock className="mr-2 h-4 w-4" />
+            {card.timeSpent || card.timeEstimate ? (
+              <span className="text-xs">
+                {card.timeSpent ?? 0}m / {card.timeEstimate ?? 0}m
+              </span>
+            ) : (
+              "Time Tracking"
+            )}
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent className="w-64" align="start">
+          <div className="space-y-4">
+            <p className="text-sm font-medium">Time Tracking</p>
+            <div className="space-y-3">
+              <div className="space-y-1">
+                <Label htmlFor="time-estimate" className="text-xs">
+                  Estimate (minutes)
+                </Label>
+                <Input
+                  id="time-estimate"
+                  type="number"
+                  min="0"
+                  value={timeEstimate}
+                  onChange={(e) => setTimeEstimate(parseInt(e.target.value) || 0)}
+                  placeholder="e.g. 120"
+                />
+              </div>
+              <div className="space-y-1">
+                <Label htmlFor="time-spent" className="text-xs">
+                  Time Spent (minutes)
+                </Label>
+                <Input
+                  id="time-spent"
+                  type="number"
+                  min="0"
+                  value={timeSpent}
+                  onChange={(e) => setTimeSpent(parseInt(e.target.value) || 0)}
+                  placeholder="e.g. 60"
+                />
+              </div>
+              <Button size="sm" className="w-full" onClick={handleSaveTime}>
+                Save
+              </Button>
             </div>
           </div>
         </PopoverContent>

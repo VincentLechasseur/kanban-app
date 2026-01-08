@@ -108,6 +108,9 @@ export const update = mutation({
     description: v.optional(v.string()),
     dueDate: v.optional(v.union(v.number(), v.null())),
     color: v.optional(v.union(v.string(), v.null())),
+    storyPoints: v.optional(v.union(v.number(), v.null())),
+    timeEstimate: v.optional(v.union(v.number(), v.null())),
+    timeSpent: v.optional(v.union(v.number(), v.null())),
   },
   handler: async (ctx, args) => {
     const userId = await getAuthUserId(ctx);
@@ -128,6 +131,9 @@ export const update = mutation({
       description: string;
       dueDate: number | undefined;
       color: string | undefined;
+      storyPoints: number | undefined;
+      timeEstimate: number | undefined;
+      timeSpent: number | undefined;
     }> = {};
     if (args.title !== undefined) updates.title = args.title;
     if (args.description !== undefined) updates.description = args.description;
@@ -137,8 +143,41 @@ export const update = mutation({
     if (args.color !== undefined) {
       updates.color = args.color === null ? undefined : args.color;
     }
+    if (args.storyPoints !== undefined) {
+      updates.storyPoints = args.storyPoints === null ? undefined : args.storyPoints;
+    }
+    if (args.timeEstimate !== undefined) {
+      updates.timeEstimate = args.timeEstimate === null ? undefined : args.timeEstimate;
+    }
+    if (args.timeSpent !== undefined) {
+      updates.timeSpent = args.timeSpent === null ? undefined : args.timeSpent;
+    }
 
     await ctx.db.patch(args.id, updates);
+  },
+});
+
+export const addTimeSpent = mutation({
+  args: {
+    cardId: v.id("cards"),
+    minutes: v.number(),
+  },
+  handler: async (ctx, args) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) throw new Error("Not authenticated");
+
+    const card = await ctx.db.get(args.cardId);
+    if (!card) throw new Error("Card not found");
+
+    const board = await ctx.db.get(card.boardId);
+    if (!board) throw new Error("Board not found");
+
+    if (board.ownerId !== userId && !board.memberIds.includes(userId)) {
+      throw new Error("Not authorized");
+    }
+
+    const currentTime = card.timeSpent ?? 0;
+    await ctx.db.patch(args.cardId, { timeSpent: currentTime + args.minutes });
   },
 });
 

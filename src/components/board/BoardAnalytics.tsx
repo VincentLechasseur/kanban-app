@@ -21,13 +21,23 @@ import {
   Clock,
   Layers,
   Tag,
+  Timer,
   TrendingUp,
   Users,
+  Zap,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface BoardAnalyticsProps {
   boardId: Id<"boards">;
+}
+
+// Format minutes to hours string
+function formatTime(minutes: number): string {
+  if (minutes < 60) return `${minutes}m`;
+  const hours = Math.floor(minutes / 60);
+  const mins = minutes % 60;
+  return mins > 0 ? `${hours}h ${mins}m` : `${hours}h`;
 }
 
 // Premium color palette
@@ -203,7 +213,7 @@ export function BoardAnalytics({ boardId }: BoardAnalyticsProps) {
     <ScrollArea className="h-full">
       <div className="space-y-6 p-6">
         {/* Top Stats Row */}
-        <div className="grid grid-cols-2 gap-6 xl:grid-cols-4">
+        <div className="grid grid-cols-2 gap-6 lg:grid-cols-3 xl:grid-cols-6">
           <StatCard icon={Layers} label="Total Cards" value={stats.totalCards} />
           <StatCard
             icon={CheckCircle2}
@@ -211,6 +221,18 @@ export function BoardAnalytics({ boardId }: BoardAnalyticsProps) {
             value={totalCompleted}
             color="success"
             subtext="Last 8 weeks"
+          />
+          <StatCard
+            icon={Zap}
+            label="Story Points"
+            value={stats.storyPointsStats.total}
+            subtext={`${stats.storyPointsStats.completed} completed`}
+          />
+          <StatCard
+            icon={Timer}
+            label="Time Tracked"
+            value={formatTime(stats.timeStats.totalSpent)}
+            subtext={`of ${formatTime(stats.timeStats.totalEstimate)} est.`}
           />
           <StatCard
             icon={AlertTriangle}
@@ -441,6 +463,211 @@ export function BoardAnalytics({ boardId }: BoardAnalyticsProps) {
                     <span className="text-muted-foreground text-sm">{label.name}</span>
                   </div>
                 ))}
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Story Points & Time Tracking Row */}
+        <div className="grid gap-6 xl:grid-cols-2">
+          {/* Story Points by Status */}
+          {stats.storyPointsStats.total > 0 && (
+            <div className="bg-card rounded-2xl border p-6">
+              <div className="mb-6 flex items-center gap-3">
+                <div className="rounded-xl bg-gradient-to-br from-indigo-500/20 to-purple-500/20 p-3">
+                  <Zap className="h-6 w-6 text-indigo-500" />
+                </div>
+                <div>
+                  <h3 className="text-xl font-semibold">Story Points by Status</h3>
+                  <p className="text-muted-foreground text-sm">
+                    Points distribution across workflow
+                  </p>
+                </div>
+              </div>
+              <div className="h-[280px]">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart
+                    data={[
+                      { name: "Backlog", points: stats.storyPointsStats.byType.backlog },
+                      { name: "To Do", points: stats.storyPointsStats.byType.todo },
+                      { name: "In Progress", points: stats.storyPointsStats.byType.in_progress },
+                      { name: "Review", points: stats.storyPointsStats.byType.review },
+                      { name: "Blocked", points: stats.storyPointsStats.byType.blocked },
+                      { name: "Done", points: stats.storyPointsStats.byType.done },
+                      { name: "Won't Do", points: stats.storyPointsStats.byType.wont_do },
+                    ].filter((d) => d.points > 0)}
+                    margin={{ top: 10, right: 30, left: 10, bottom: 20 }}
+                  >
+                    <defs>
+                      <linearGradient id="pointsGradient" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor="#6366f1" />
+                        <stop offset="100%" stopColor="#8b5cf6" />
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid
+                      strokeDasharray="3 3"
+                      stroke="hsl(var(--border))"
+                      vertical={false}
+                    />
+                    <XAxis
+                      dataKey="name"
+                      axisLine={false}
+                      tickLine={false}
+                      tick={{ fontSize: 12, fill: "hsl(var(--muted-foreground))" }}
+                      dy={10}
+                    />
+                    <YAxis
+                      allowDecimals={false}
+                      axisLine={false}
+                      tickLine={false}
+                      tick={{ fontSize: 12, fill: "hsl(var(--muted-foreground))" }}
+                    />
+                    <Tooltip
+                      content={<CustomTooltip />}
+                      cursor={{ fill: "hsl(var(--muted))", opacity: 0.3 }}
+                    />
+                    <Bar
+                      dataKey="points"
+                      name="Points"
+                      fill="url(#pointsGradient)"
+                      radius={[8, 8, 0, 0]}
+                      maxBarSize={70}
+                    />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+              {/* Story Points Summary */}
+              <div className="mt-4 grid grid-cols-3 gap-4 border-t pt-4">
+                <div className="text-center">
+                  <p className="text-2xl font-bold text-indigo-600 dark:text-indigo-400">
+                    {stats.storyPointsStats.total}
+                  </p>
+                  <p className="text-muted-foreground text-xs">Total Points</p>
+                </div>
+                <div className="text-center">
+                  <p className="text-2xl font-bold text-emerald-600 dark:text-emerald-400">
+                    {stats.storyPointsStats.completed}
+                  </p>
+                  <p className="text-muted-foreground text-xs">Completed</p>
+                </div>
+                <div className="text-center">
+                  <p className="text-2xl font-bold text-amber-600 dark:text-amber-400">
+                    {stats.storyPointsStats.total - stats.storyPointsStats.completed}
+                  </p>
+                  <p className="text-muted-foreground text-xs">Remaining</p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Time Tracking Overview */}
+          {stats.timeStats.cardsWithTime > 0 && (
+            <div className="bg-card rounded-2xl border p-6">
+              <div className="mb-6 flex items-center gap-3">
+                <div className="rounded-xl bg-gradient-to-br from-cyan-500/20 to-blue-500/20 p-3">
+                  <Timer className="h-6 w-6 text-cyan-500" />
+                </div>
+                <div>
+                  <h3 className="text-xl font-semibold">Time Tracking</h3>
+                  <p className="text-muted-foreground text-sm">Estimated vs actual time spent</p>
+                </div>
+              </div>
+              <div className="space-y-6">
+                {/* Time Progress Bar */}
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="font-medium">Time Progress</span>
+                    <span className="text-muted-foreground">
+                      {stats.timeStats.totalEstimate > 0
+                        ? `${Math.round((stats.timeStats.totalSpent / stats.timeStats.totalEstimate) * 100)}%`
+                        : "N/A"}
+                    </span>
+                  </div>
+                  <div className="bg-muted h-6 overflow-hidden rounded-full">
+                    <div
+                      className={cn(
+                        "h-full rounded-full transition-all duration-500",
+                        stats.timeStats.totalSpent > stats.timeStats.totalEstimate
+                          ? "bg-gradient-to-r from-red-500 to-red-400"
+                          : "bg-gradient-to-r from-cyan-500 to-blue-500"
+                      )}
+                      style={{
+                        width: `${Math.min(100, stats.timeStats.totalEstimate > 0 ? (stats.timeStats.totalSpent / stats.timeStats.totalEstimate) * 100 : 0)}%`,
+                      }}
+                    />
+                  </div>
+                </div>
+
+                {/* Time Stats Grid */}
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="rounded-xl bg-cyan-500/10 p-5">
+                    <div className="flex items-center gap-3">
+                      <Clock className="h-8 w-8 text-cyan-500" />
+                      <div>
+                        <p className="text-2xl font-bold text-cyan-600 dark:text-cyan-400">
+                          {formatTime(stats.timeStats.totalEstimate)}
+                        </p>
+                        <p className="text-muted-foreground text-sm">Estimated</p>
+                      </div>
+                    </div>
+                  </div>
+                  <div
+                    className={cn(
+                      "rounded-xl p-5",
+                      stats.timeStats.totalSpent > stats.timeStats.totalEstimate
+                        ? "bg-red-500/10"
+                        : "bg-emerald-500/10"
+                    )}
+                  >
+                    <div className="flex items-center gap-3">
+                      <Timer
+                        className={cn(
+                          "h-8 w-8",
+                          stats.timeStats.totalSpent > stats.timeStats.totalEstimate
+                            ? "text-red-500"
+                            : "text-emerald-500"
+                        )}
+                      />
+                      <div>
+                        <p
+                          className={cn(
+                            "text-2xl font-bold",
+                            stats.timeStats.totalSpent > stats.timeStats.totalEstimate
+                              ? "text-red-600 dark:text-red-400"
+                              : "text-emerald-600 dark:text-emerald-400"
+                          )}
+                        >
+                          {formatTime(stats.timeStats.totalSpent)}
+                        </p>
+                        <p className="text-muted-foreground text-sm">Time Spent</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Additional Stats */}
+                <div className="flex items-center justify-between border-t pt-4 text-sm">
+                  <span className="text-muted-foreground">Cards with time tracking</span>
+                  <span className="font-semibold">{stats.timeStats.cardsWithTime} cards</span>
+                </div>
+                {stats.timeStats.totalEstimate > 0 && (
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-muted-foreground">Time variance</span>
+                    <span
+                      className={cn(
+                        "font-semibold",
+                        stats.timeStats.totalSpent > stats.timeStats.totalEstimate
+                          ? "text-red-600 dark:text-red-400"
+                          : "text-emerald-600 dark:text-emerald-400"
+                      )}
+                    >
+                      {stats.timeStats.totalSpent > stats.timeStats.totalEstimate ? "+" : "-"}
+                      {formatTime(
+                        Math.abs(stats.timeStats.totalSpent - stats.timeStats.totalEstimate)
+                      )}
+                    </span>
+                  </div>
+                )}
               </div>
             </div>
           )}
