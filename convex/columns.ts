@@ -3,6 +3,41 @@ import { internal } from "./_generated/api";
 import { getAuthUserId } from "@convex-dev/auth/server";
 import { v } from "convex/values";
 
+// Column type definitions
+export const columnTypes = [
+  "backlog",
+  "todo",
+  "in_progress",
+  "review",
+  "blocked",
+  "done",
+  "wont_do",
+] as const;
+
+export type ColumnType = (typeof columnTypes)[number];
+
+// Auto-suggest column type based on name
+function suggestColumnType(name: string): ColumnType | undefined {
+  const lower = name.toLowerCase();
+  if (lower.includes("backlog") || lower.includes("icebox")) return "backlog";
+  if (lower.includes("to do") || lower.includes("todo") || lower.includes("to-do")) return "todo";
+  if (lower.includes("in progress") || lower.includes("doing") || lower.includes("working"))
+    return "in_progress";
+  if (lower.includes("review") || lower.includes("testing") || lower.includes("qa"))
+    return "review";
+  if (lower.includes("blocked") || lower.includes("on hold")) return "blocked";
+  if (lower.includes("done") || lower.includes("complete") || lower.includes("finished"))
+    return "done";
+  if (
+    lower.includes("won't do") ||
+    lower.includes("wont do") ||
+    lower.includes("cancel") ||
+    lower.includes("rejected")
+  )
+    return "wont_do";
+  return undefined;
+}
+
 export const list = query({
   args: { boardId: v.id("boards") },
   handler: async (ctx, args) => {
@@ -52,6 +87,7 @@ export const create = mutation({
       boardId: args.boardId,
       name: args.name,
       order: maxOrder + 1,
+      type: suggestColumnType(args.name),
     });
 
     // Log activity
@@ -151,5 +187,38 @@ export const reorder = mutation({
     for (let i = 0; i < args.columnIds.length; i++) {
       await ctx.db.patch(args.columnIds[i], { order: i });
     }
+  },
+});
+
+export const setType = mutation({
+  args: {
+    id: v.id("columns"),
+    type: v.optional(
+      v.union(
+        v.literal("backlog"),
+        v.literal("todo"),
+        v.literal("in_progress"),
+        v.literal("review"),
+        v.literal("blocked"),
+        v.literal("done"),
+        v.literal("wont_do")
+      )
+    ),
+  },
+  handler: async (ctx, args) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) throw new Error("Not authenticated");
+
+    const column = await ctx.db.get(args.id);
+    if (!column) throw new Error("Column not found");
+
+    const board = await ctx.db.get(column.boardId);
+    if (!board) throw new Error("Board not found");
+
+    if (board.ownerId !== userId && !board.memberIds.includes(userId)) {
+      throw new Error("Not authorized");
+    }
+
+    await ctx.db.patch(args.id, { type: args.type });
   },
 });

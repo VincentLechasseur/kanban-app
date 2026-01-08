@@ -11,7 +11,11 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
   DropdownMenuTrigger,
+  DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
 import {
   AlertDialog,
@@ -25,8 +29,40 @@ import {
 } from "@/components/ui/alert-dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
-import { MoreHorizontal, Pencil, Plus, Trash2, X } from "lucide-react";
+import {
+  Archive,
+  Ban,
+  CheckCircle2,
+  CircleDashed,
+  Clock,
+  Loader2,
+  MoreHorizontal,
+  Pencil,
+  Plus,
+  Search,
+  Trash2,
+  X,
+  XCircle,
+} from "lucide-react";
 import { toast } from "sonner";
+
+// Column type configuration
+const COLUMN_TYPES = {
+  backlog: { label: "Backlog", icon: Archive, color: "text-slate-500", bg: "bg-slate-500/10" },
+  todo: { label: "To Do", icon: CircleDashed, color: "text-blue-500", bg: "bg-blue-500/10" },
+  in_progress: {
+    label: "In Progress",
+    icon: Loader2,
+    color: "text-amber-500",
+    bg: "bg-amber-500/10",
+  },
+  review: { label: "Review", icon: Search, color: "text-purple-500", bg: "bg-purple-500/10" },
+  blocked: { label: "Blocked", icon: Ban, color: "text-red-500", bg: "bg-red-500/10" },
+  done: { label: "Done", icon: CheckCircle2, color: "text-emerald-500", bg: "bg-emerald-500/10" },
+  wont_do: { label: "Won't Do", icon: XCircle, color: "text-slate-400", bg: "bg-slate-400/10" },
+} as const;
+
+type ColumnType = keyof typeof COLUMN_TYPES;
 
 interface ColumnProps {
   column: Doc<"columns">;
@@ -37,6 +73,10 @@ export function Column({ column, cards }: ColumnProps) {
   const updateColumn = useMutation(api.columns.update);
   const deleteColumn = useMutation(api.columns.remove);
   const createCard = useMutation(api.cards.create);
+  const setColumnType = useMutation(api.columns.setType);
+
+  const columnType = column.type as ColumnType | undefined;
+  const typeConfig = columnType ? COLUMN_TYPES[columnType] : null;
 
   const [isEditing, setIsEditing] = useState(false);
   const [name, setName] = useState(column.name);
@@ -86,6 +126,17 @@ export function Column({ column, cards }: ColumnProps) {
     }
   };
 
+  const handleSetType = async (type: ColumnType | undefined) => {
+    try {
+      await setColumnType({ id: column._id, type });
+      toast.success(
+        type ? `Column type set to ${COLUMN_TYPES[type].label}` : "Column type cleared"
+      );
+    } catch {
+      toast.error("Failed to update column type");
+    }
+  };
+
   return (
     <div
       className={cn(
@@ -112,6 +163,11 @@ export function Column({ column, cards }: ColumnProps) {
           />
         ) : (
           <div className="flex items-center gap-2">
+            {typeConfig && (
+              <div className={cn("rounded p-1", typeConfig.bg)}>
+                <typeConfig.icon className={cn("h-3.5 w-3.5", typeConfig.color)} />
+              </div>
+            )}
             <h3 className="font-medium">{column.name}</h3>
             <span className="bg-muted text-muted-foreground rounded px-1.5 py-0.5 text-xs">
               {cards.length}
@@ -130,6 +186,35 @@ export function Column({ column, cards }: ColumnProps) {
               <Pencil className="mr-2 h-4 w-4" />
               Rename
             </DropdownMenuItem>
+            <DropdownMenuSub>
+              <DropdownMenuSubTrigger>
+                <Clock className="mr-2 h-4 w-4" />
+                Set Type
+              </DropdownMenuSubTrigger>
+              <DropdownMenuSubContent>
+                {(
+                  Object.entries(COLUMN_TYPES) as [ColumnType, (typeof COLUMN_TYPES)[ColumnType]][]
+                ).map(([type, config]) => (
+                  <DropdownMenuItem
+                    key={type}
+                    onClick={() => handleSetType(type)}
+                    className={cn(columnType === type && "bg-accent")}
+                  >
+                    <config.icon className={cn("mr-2 h-4 w-4", config.color)} />
+                    {config.label}
+                    {columnType === type && (
+                      <CheckCircle2 className="ml-auto h-4 w-4 text-emerald-500" />
+                    )}
+                  </DropdownMenuItem>
+                ))}
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={() => handleSetType(undefined)}>
+                  <X className="mr-2 h-4 w-4" />
+                  Clear Type
+                </DropdownMenuItem>
+              </DropdownMenuSubContent>
+            </DropdownMenuSub>
+            <DropdownMenuSeparator />
             <DropdownMenuItem className="text-destructive" onClick={() => setDeleteOpen(true)}>
               <Trash2 className="mr-2 h-4 w-4" />
               Delete

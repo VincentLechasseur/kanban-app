@@ -23,6 +23,18 @@ export default defineSchema({
     boardId: v.id("boards"),
     name: v.string(),
     order: v.number(),
+    // Column type for workflow tracking
+    type: v.optional(
+      v.union(
+        v.literal("backlog"),
+        v.literal("todo"),
+        v.literal("in_progress"),
+        v.literal("review"),
+        v.literal("blocked"),
+        v.literal("done"),
+        v.literal("wont_do")
+      )
+    ),
   }).index("by_board", ["boardId"]),
 
   cards: defineTable({

@@ -31,14 +31,36 @@ export const getBoardStats = query({
       .withIndex("by_board", (q) => q.eq("boardId", args.boardId))
       .collect();
 
-    // Cards per column
+    // Cards per column (with type info)
     const cardsPerColumn = columns
       .sort((a, b) => a.order - b.order)
       .map((col) => ({
         name: col.name,
         count: cards.filter((c) => c.columnId === col._id).length,
         columnId: col._id,
+        type: col.type,
       }));
+
+    // Cards by column type
+    const cardsByType = {
+      backlog: 0,
+      todo: 0,
+      in_progress: 0,
+      review: 0,
+      blocked: 0,
+      done: 0,
+      wont_do: 0,
+      unset: 0,
+    };
+
+    cards.forEach((card) => {
+      const column = columns.find((c) => c._id === card.columnId);
+      if (column?.type) {
+        cardsByType[column.type]++;
+      } else {
+        cardsByType.unset++;
+      }
+    });
 
     // Cards by assignee
     const assigneeCounts: Record<string, number> = {};
@@ -122,6 +144,7 @@ export const getBoardStats = query({
       totalCards: cards.length,
       totalColumns: columns.length,
       cardsPerColumn,
+      cardsByType,
       assigneeStats,
       cardsOverTime,
       labelStats,
@@ -167,15 +190,22 @@ export const getVelocity = query({
       )
       .collect();
 
-    // Get columns to find "Done" column
+    // Get columns to find "Done" columns (by type or name)
     const columns = await ctx.db
       .query("columns")
       .withIndex("by_board", (q) => q.eq("boardId", args.boardId))
       .collect();
 
-    const doneColumn = columns.find(
-      (c) => c.name.toLowerCase() === "done" || c.name.toLowerCase() === "completed"
-    );
+    // A column is considered "done" if:
+    // 1. It has type === "done", OR
+    // 2. It doesn't have a type but has name like "done"/"completed"
+    const doneColumnNames = columns
+      .filter(
+        (c) =>
+          c.type === "done" ||
+          (!c.type && (c.name.toLowerCase() === "done" || c.name.toLowerCase() === "completed"))
+      )
+      .map((c) => c.name.toLowerCase());
 
     // Group completed cards by week
     const weeklyData: Record<string, number> = {};
@@ -188,14 +218,11 @@ export const getVelocity = query({
         day: "numeric",
       });
 
-      // Count activities that moved cards to Done column
+      // Count activities that moved cards to a Done-type column
       const completed = activities.filter((a) => {
         if (a.createdAt < weekStart || a.createdAt >= weekEnd) return false;
-        if (doneColumn && a.metadata?.toColumnName) {
-          return (
-            a.metadata.toColumnName.toLowerCase() === "done" ||
-            a.metadata.toColumnName.toLowerCase() === "completed"
-          );
+        if (a.metadata?.toColumnName) {
+          return doneColumnNames.includes(a.metadata.toColumnName.toLowerCase());
         }
         return false;
       }).length;
