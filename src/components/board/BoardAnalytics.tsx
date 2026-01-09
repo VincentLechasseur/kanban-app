@@ -13,6 +13,8 @@ import {
   AreaChart,
   Area,
   Cell,
+  PieChart,
+  Pie,
 } from "recharts";
 import {
   AlertTriangle,
@@ -25,6 +27,7 @@ import {
   TrendingUp,
   Users,
   Zap,
+  Target,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -40,16 +43,19 @@ function formatTime(minutes: number): string {
   return mins > 0 ? `${hours}h ${mins}m` : `${hours}h`;
 }
 
-// Premium color palette
-const GRADIENT_COLORS = {
-  primary: { start: "#6366f1", end: "#8b5cf6" },
-  success: { start: "#10b981", end: "#34d399" },
-  warning: { start: "#f59e0b", end: "#fbbf24" },
-  danger: { start: "#ef4444", end: "#f87171" },
-  info: { start: "#0ea5e9", end: "#38bdf8" },
+// Modern color palette
+const COLORS = {
+  primary: "#6366f1",
+  success: "#10b981",
+  warning: "#f59e0b",
+  danger: "#ef4444",
+  info: "#0ea5e9",
+  purple: "#8b5cf6",
+  pink: "#ec4899",
+  cyan: "#06b6d4",
 };
 
-// Modern assignee colors
+// Assignee colors
 const ASSIGNEE_COLORS = [
   "#6366f1",
   "#8b5cf6",
@@ -74,15 +80,15 @@ function CustomTooltip({
   if (!active || !payload?.length) return null;
 
   return (
-    <div className="bg-popover/95 rounded-xl border px-4 py-3 shadow-xl backdrop-blur-sm">
-      {label && <p className="text-foreground mb-2 text-sm font-medium">{label}</p>}
+    <div className="bg-popover rounded-lg border px-3 py-2 text-xs shadow-lg">
+      {label && <p className="text-foreground mb-1 font-medium">{label}</p>}
       {payload.map((entry, index) => (
         <div key={index} className="flex items-center gap-2">
           <div
-            className="h-3 w-3 rounded-full"
-            style={{ backgroundColor: entry.color || GRADIENT_COLORS.primary.start }}
+            className="h-2 w-2 rounded-full"
+            style={{ backgroundColor: entry.color || COLORS.primary }}
           />
-          <span className="text-muted-foreground text-sm">{entry.name}:</span>
+          <span className="text-muted-foreground">{entry.name}:</span>
           <span className="font-semibold">{entry.value}</span>
         </div>
       ))}
@@ -90,65 +96,130 @@ function CustomTooltip({
   );
 }
 
-// Large stat card for dashboard
-function StatCard({
+// Mini stat card
+function MiniStat({
   icon: Icon,
   label,
   value,
   color = "default",
-  subtext,
+  trend,
 }: {
   icon: React.ElementType;
   label: string;
   value: number | string;
-  color?: "default" | "success" | "warning" | "danger";
-  subtext?: string;
+  color?: "default" | "success" | "warning" | "danger" | "info";
+  trend?: string;
 }) {
-  const bgClasses = {
-    default: "from-slate-500/10 to-slate-600/10",
-    success: "from-emerald-500/10 to-emerald-600/10",
-    warning: "from-amber-500/10 to-amber-600/10",
-    danger: "from-red-500/10 to-red-600/10",
+  const colorClasses = {
+    default: {
+      icon: "text-slate-500",
+      bg: "bg-slate-500/10",
+      value: "text-foreground",
+    },
+    success: {
+      icon: "text-emerald-500",
+      bg: "bg-emerald-500/10",
+      value: "text-emerald-600 dark:text-emerald-400",
+    },
+    warning: {
+      icon: "text-amber-500",
+      bg: "bg-amber-500/10",
+      value: "text-amber-600 dark:text-amber-400",
+    },
+    danger: {
+      icon: "text-red-500",
+      bg: "bg-red-500/10",
+      value: "text-red-600 dark:text-red-400",
+    },
+    info: {
+      icon: "text-blue-500",
+      bg: "bg-blue-500/10",
+      value: "text-blue-600 dark:text-blue-400",
+    },
   };
 
-  const textClasses = {
-    default: "text-foreground",
-    success: "text-emerald-600 dark:text-emerald-400",
-    warning: "text-amber-600 dark:text-amber-400",
-    danger: "text-red-600 dark:text-red-400",
-  };
-
-  const iconClasses = {
-    default: "text-slate-500 bg-slate-500/20",
-    success: "text-emerald-500 bg-emerald-500/20",
-    warning: "text-amber-500 bg-amber-500/20",
-    danger: "text-red-500 bg-red-500/20",
-  };
+  const styles = colorClasses[color];
 
   return (
-    <div
-      className={cn(
-        "bg-card relative overflow-hidden rounded-2xl border bg-gradient-to-br p-6",
-        bgClasses[color]
-      )}
-    >
-      <div className="flex items-center justify-between">
-        <div>
-          <p className="text-muted-foreground text-sm font-medium">{label}</p>
-          <p className={cn("mt-2 text-4xl font-bold tracking-tight", textClasses[color])}>
-            {value}
-          </p>
-          {subtext && <p className="text-muted-foreground mt-1 text-sm">{subtext}</p>}
-        </div>
-        <div className={cn("rounded-2xl p-4", iconClasses[color])}>
-          <Icon className="h-8 w-8" />
+    <div className="bg-card hover:bg-accent/50 group flex items-center gap-3 rounded-xl border p-3 transition-colors">
+      <div className={cn("rounded-lg p-2", styles.bg)}>
+        <Icon className={cn("h-4 w-4", styles.icon)} />
+      </div>
+      <div className="min-w-0 flex-1">
+        <p className="text-muted-foreground truncate text-xs">{label}</p>
+        <div className="flex items-baseline gap-1.5">
+          <p className={cn("text-lg leading-none font-bold", styles.value)}>{value}</p>
+          {trend && <span className="text-muted-foreground text-[10px]">{trend}</span>}
         </div>
       </div>
     </div>
   );
 }
 
-// Progress bar for workload
+// Section header
+function SectionHeader({
+  icon: Icon,
+  title,
+  subtitle,
+  iconColor,
+}: {
+  icon: React.ElementType;
+  title: string;
+  subtitle?: string;
+  iconColor: string;
+}) {
+  return (
+    <div className="mb-3 flex items-center gap-2">
+      <Icon className={cn("h-4 w-4", iconColor)} />
+      <div>
+        <h3 className="text-sm font-semibold">{title}</h3>
+        {subtitle && <p className="text-muted-foreground text-[10px]">{subtitle}</p>}
+      </div>
+    </div>
+  );
+}
+
+// Progress ring for completion
+function CompletionRing({
+  completed,
+  total,
+  label,
+}: {
+  completed: number;
+  total: number;
+  label: string;
+}) {
+  const percentage = total > 0 ? Math.round((completed / total) * 100) : 0;
+
+  return (
+    <div className="flex flex-col items-center">
+      <div className="relative h-16 w-16">
+        <svg className="h-16 w-16 -rotate-90" viewBox="0 0 36 36">
+          <path
+            d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+            fill="none"
+            stroke="hsl(var(--muted))"
+            strokeWidth="3"
+          />
+          <path
+            d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+            fill="none"
+            stroke={COLORS.success}
+            strokeWidth="3"
+            strokeDasharray={`${percentage}, 100`}
+            strokeLinecap="round"
+          />
+        </svg>
+        <div className="absolute inset-0 flex items-center justify-center">
+          <span className="text-sm font-bold">{percentage}%</span>
+        </div>
+      </div>
+      <p className="text-muted-foreground mt-1 text-[10px]">{label}</p>
+    </div>
+  );
+}
+
+// Compact workload bar
 function WorkloadBar({
   name,
   count,
@@ -163,22 +234,15 @@ function WorkloadBar({
   const percentage = total > 0 ? (count / total) * 100 : 0;
 
   return (
-    <div className="space-y-2">
-      <div className="flex items-center justify-between text-sm">
-        <span className="font-medium">{name}</span>
-        <span className="text-muted-foreground">
-          {count} cards ({percentage.toFixed(0)}%)
-        </span>
-      </div>
-      <div className="bg-muted h-4 overflow-hidden rounded-full">
+    <div className="group flex items-center gap-2">
+      <span className="w-20 truncate text-xs font-medium">{name}</span>
+      <div className="bg-muted h-2 flex-1 overflow-hidden rounded-full">
         <div
-          className="h-full rounded-full transition-all duration-500"
-          style={{
-            width: `${percentage}%`,
-            backgroundColor: color,
-          }}
+          className="h-full rounded-full transition-all duration-500 group-hover:opacity-80"
+          style={{ width: `${percentage}%`, backgroundColor: color }}
         />
       </div>
+      <span className="text-muted-foreground w-8 text-right text-[10px]">{count}</span>
     </div>
   );
 }
@@ -190,9 +254,9 @@ export function BoardAnalytics({ boardId }: BoardAnalyticsProps) {
   if (stats === undefined || velocity === undefined) {
     return (
       <div className="flex h-full items-center justify-center">
-        <div className="flex flex-col items-center gap-3">
-          <div className="border-primary h-12 w-12 animate-spin rounded-full border-4 border-t-transparent" />
-          <p className="text-muted-foreground">Loading analytics...</p>
+        <div className="flex flex-col items-center gap-2">
+          <div className="border-primary h-8 w-8 animate-spin rounded-full border-2 border-t-transparent" />
+          <p className="text-muted-foreground text-sm">Loading analytics...</p>
         </div>
       </div>
     );
@@ -208,75 +272,76 @@ export function BoardAnalytics({ boardId }: BoardAnalyticsProps) {
 
   const totalAssigned = stats.assigneeStats.reduce((sum, s) => sum + s.count, 0);
   const totalCompleted = velocity.reduce((sum, v) => sum + v.completed, 0);
+  const avgVelocity = velocity.length > 0 ? Math.round(totalCompleted / velocity.length) : 0;
+
+  // Prepare pie chart data for cards by type
+  const typeData = [
+    { name: "Done", value: stats.cardsByType.done, color: COLORS.success },
+    { name: "In Progress", value: stats.cardsByType.in_progress, color: COLORS.warning },
+    { name: "To Do", value: stats.cardsByType.todo, color: COLORS.info },
+    { name: "Backlog", value: stats.cardsByType.backlog, color: "#94a3b8" },
+    { name: "Review", value: stats.cardsByType.review, color: COLORS.purple },
+    { name: "Blocked", value: stats.cardsByType.blocked, color: COLORS.danger },
+  ].filter((d) => d.value > 0);
 
   return (
     <ScrollArea className="h-full">
-      <div className="space-y-6 p-6">
-        {/* Top Stats Row */}
-        <div className="grid grid-cols-2 gap-6 lg:grid-cols-3 xl:grid-cols-6">
-          <StatCard icon={Layers} label="Total Cards" value={stats.totalCards} />
-          <StatCard
+      <div className="space-y-4 p-4">
+        {/* Top Stats Grid - 6 columns */}
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6">
+          <MiniStat icon={Layers} label="Total Cards" value={stats.totalCards} />
+          <MiniStat
             icon={CheckCircle2}
             label="Completed"
             value={totalCompleted}
             color="success"
-            subtext="Last 8 weeks"
+            trend="8 weeks"
           />
-          <StatCard
+          <MiniStat
+            icon={TrendingUp}
+            label="Avg Velocity"
+            value={avgVelocity}
+            color="info"
+            trend="/week"
+          />
+          <MiniStat
             icon={Zap}
             label="Story Points"
             value={stats.storyPointsStats.total}
-            subtext={`${stats.storyPointsStats.completed} completed`}
+            trend={`${stats.storyPointsStats.completed} done`}
           />
-          <StatCard
-            icon={Timer}
-            label="Time Tracked"
-            value={formatTime(stats.timeStats.totalSpent)}
-            subtext={`of ${formatTime(stats.timeStats.totalEstimate)} est.`}
-          />
-          <StatCard
+          <MiniStat
             icon={AlertTriangle}
             label="Overdue"
             value={stats.dueDateStats.overdue}
             color="danger"
           />
-          <StatCard
+          <MiniStat
             icon={Calendar}
-            label="Due This Week"
+            label="Due Soon"
             value={stats.dueDateStats.dueThisWeek}
             color="warning"
           />
         </div>
 
-        {/* Main Charts Row - 3 columns on large screens */}
-        <div className="grid gap-6 xl:grid-cols-3">
-          {/* Team Velocity - Takes 2 columns */}
+        {/* Main Content - 3 column layout */}
+        <div className="grid gap-4 lg:grid-cols-3">
+          {/* Velocity Chart - 2 columns */}
           {velocity.length > 0 && (
-            <div className="bg-card rounded-2xl border p-6 xl:col-span-2">
-              <div className="mb-6 flex items-center gap-3">
-                <div className="rounded-xl bg-gradient-to-br from-emerald-500/20 to-emerald-600/20 p-3">
-                  <TrendingUp className="h-6 w-6 text-emerald-500" />
-                </div>
-                <div>
-                  <h3 className="text-xl font-semibold">Team Velocity</h3>
-                  <p className="text-muted-foreground text-sm">Cards completed per week</p>
-                </div>
-              </div>
-              <div className="h-[300px]">
+            <div className="bg-card rounded-xl border p-4 lg:col-span-2">
+              <SectionHeader
+                icon={TrendingUp}
+                title="Team Velocity"
+                subtitle="Cards completed per week"
+                iconColor="text-emerald-500"
+              />
+              <div className="h-[180px]">
                 <ResponsiveContainer width="100%" height="100%">
-                  <AreaChart data={velocity} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
+                  <AreaChart data={velocity} margin={{ top: 5, right: 10, left: -20, bottom: 0 }}>
                     <defs>
-                      <linearGradient id="velocityGradient" x1="0" y1="0" x2="0" y2="1">
-                        <stop
-                          offset="0%"
-                          stopColor={GRADIENT_COLORS.success.start}
-                          stopOpacity={0.4}
-                        />
-                        <stop
-                          offset="100%"
-                          stopColor={GRADIENT_COLORS.success.end}
-                          stopOpacity={0.05}
-                        />
+                      <linearGradient id="velocityFill" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor={COLORS.success} stopOpacity={0.3} />
+                        <stop offset="100%" stopColor={COLORS.success} stopOpacity={0.05} />
                       </linearGradient>
                     </defs>
                     <CartesianGrid
@@ -288,24 +353,24 @@ export function BoardAnalytics({ boardId }: BoardAnalyticsProps) {
                       dataKey="week"
                       axisLine={false}
                       tickLine={false}
-                      tick={{ fontSize: 12, fill: "hsl(var(--muted-foreground))" }}
-                      dy={10}
+                      tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }}
+                      dy={5}
                     />
                     <YAxis
                       allowDecimals={false}
                       axisLine={false}
                       tickLine={false}
-                      tick={{ fontSize: 12, fill: "hsl(var(--muted-foreground))" }}
-                      dx={-10}
+                      tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }}
+                      width={30}
                     />
                     <Tooltip content={<CustomTooltip />} />
                     <Area
                       type="monotone"
                       dataKey="completed"
                       name="Completed"
-                      stroke={GRADIENT_COLORS.success.start}
-                      strokeWidth={3}
-                      fill="url(#velocityGradient)"
+                      stroke={COLORS.success}
+                      strokeWidth={2}
+                      fill="url(#velocityFill)"
                     />
                   </AreaChart>
                 </ResponsiveContainer>
@@ -313,352 +378,90 @@ export function BoardAnalytics({ boardId }: BoardAnalyticsProps) {
             </div>
           )}
 
-          {/* Workload Distribution */}
-          {stats.assigneeStats.length > 0 && (
-            <div className="bg-card rounded-2xl border p-6">
-              <div className="mb-6 flex items-center gap-3">
-                <div className="rounded-xl bg-gradient-to-br from-violet-500/20 to-pink-500/20 p-3">
-                  <Users className="h-6 w-6 text-violet-500" />
-                </div>
-                <div>
-                  <h3 className="text-xl font-semibold">Workload</h3>
-                  <p className="text-muted-foreground text-sm">Cards per member</p>
-                </div>
-              </div>
-              <div className="space-y-5">
-                {stats.assigneeStats.map((stat, index) => (
-                  <WorkloadBar
-                    key={stat.userId}
-                    name={stat.name}
-                    count={stat.count}
-                    total={totalAssigned}
-                    color={ASSIGNEE_COLORS[index % ASSIGNEE_COLORS.length]}
-                  />
-                ))}
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* Bottom Charts Row - 2 columns */}
-        <div className="grid gap-6 xl:grid-cols-2">
-          {/* Cards per Column */}
-          {stats.cardsPerColumn.length > 0 && (
-            <div className="bg-card rounded-2xl border p-6">
-              <div className="mb-6 flex items-center gap-3">
-                <div className="rounded-xl bg-gradient-to-br from-indigo-500/20 to-violet-500/20 p-3">
-                  <Layers className="h-6 w-6 text-indigo-500" />
-                </div>
-                <div>
-                  <h3 className="text-xl font-semibold">Cards by Column</h3>
-                  <p className="text-muted-foreground text-sm">Workflow distribution</p>
-                </div>
-              </div>
-              <div className="h-[280px]">
+          {/* Status Distribution - Pie + Legend */}
+          <div className="bg-card rounded-xl border p-4">
+            <SectionHeader icon={Target} title="Status Distribution" iconColor="text-indigo-500" />
+            <div className="flex items-center gap-4">
+              <div className="h-[140px] w-[140px]">
                 <ResponsiveContainer width="100%" height="100%">
-                  <BarChart
-                    data={stats.cardsPerColumn}
-                    layout="vertical"
-                    margin={{ top: 0, right: 30, left: 0, bottom: 0 }}
-                  >
-                    <defs>
-                      <linearGradient id="barGradient" x1="0" y1="0" x2="1" y2="0">
-                        <stop offset="0%" stopColor={GRADIENT_COLORS.primary.start} />
-                        <stop offset="100%" stopColor={GRADIENT_COLORS.primary.end} />
-                      </linearGradient>
-                    </defs>
-                    <CartesianGrid
-                      strokeDasharray="3 3"
-                      stroke="hsl(var(--border))"
-                      horizontal={false}
-                    />
-                    <XAxis
-                      type="number"
-                      allowDecimals={false}
-                      axisLine={false}
-                      tickLine={false}
-                      tick={{ fontSize: 12, fill: "hsl(var(--muted-foreground))" }}
-                    />
-                    <YAxis
-                      dataKey="name"
-                      type="category"
-                      width={120}
-                      axisLine={false}
-                      tickLine={false}
-                      tick={{ fontSize: 13, fill: "hsl(var(--foreground))" }}
-                    />
-                    <Tooltip
-                      content={<CustomTooltip />}
-                      cursor={{ fill: "hsl(var(--muted))", opacity: 0.3 }}
-                    />
-                    <Bar
-                      dataKey="count"
-                      name="Cards"
-                      fill="url(#barGradient)"
-                      radius={[0, 8, 8, 0]}
-                      maxBarSize={50}
-                    />
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
-            </div>
-          )}
-
-          {/* Cards by Label */}
-          {stats.labelStats.length > 0 && (
-            <div className="bg-card rounded-2xl border p-6">
-              <div className="mb-6 flex items-center gap-3">
-                <div className="rounded-xl bg-gradient-to-br from-orange-500/20 to-rose-500/20 p-3">
-                  <Tag className="h-6 w-6 text-orange-500" />
-                </div>
-                <div>
-                  <h3 className="text-xl font-semibold">Cards by Label</h3>
-                  <p className="text-muted-foreground text-sm">Categorization breakdown</p>
-                </div>
-              </div>
-              <div className="h-[220px]">
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart
-                    data={stats.labelStats}
-                    margin={{ top: 10, right: 30, left: 10, bottom: 20 }}
-                  >
-                    <CartesianGrid
-                      strokeDasharray="3 3"
-                      stroke="hsl(var(--border))"
-                      vertical={false}
-                    />
-                    <XAxis
-                      dataKey="name"
-                      axisLine={false}
-                      tickLine={false}
-                      tick={{ fontSize: 12, fill: "hsl(var(--muted-foreground))" }}
-                      dy={10}
-                    />
-                    <YAxis
-                      allowDecimals={false}
-                      axisLine={false}
-                      tickLine={false}
-                      tick={{ fontSize: 12, fill: "hsl(var(--muted-foreground))" }}
-                    />
-                    <Tooltip
-                      content={<CustomTooltip />}
-                      cursor={{ fill: "hsl(var(--muted))", opacity: 0.3 }}
-                    />
-                    <Bar dataKey="count" name="Cards" radius={[8, 8, 0, 0]} maxBarSize={70}>
-                      {stats.labelStats.map((entry, index) => (
+                  <PieChart>
+                    <Pie
+                      data={typeData}
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={35}
+                      outerRadius={55}
+                      paddingAngle={2}
+                      dataKey="value"
+                    >
+                      {typeData.map((entry, index) => (
                         <Cell key={`cell-${index}`} fill={entry.color} />
                       ))}
-                    </Bar>
-                  </BarChart>
+                    </Pie>
+                    <Tooltip content={<CustomTooltip />} />
+                  </PieChart>
                 </ResponsiveContainer>
               </div>
-              {/* Label Legend */}
-              <div className="mt-4 flex flex-wrap gap-4">
-                {stats.labelStats.map((label) => (
-                  <div key={label.name} className="flex items-center gap-2">
-                    <div
-                      className="h-3 w-3 rounded-full"
-                      style={{ backgroundColor: label.color }}
-                    />
-                    <span className="text-muted-foreground text-sm">{label.name}</span>
+              <div className="flex-1 space-y-1">
+                {typeData.map((item) => (
+                  <div key={item.name} className="flex items-center justify-between text-xs">
+                    <div className="flex items-center gap-1.5">
+                      <div
+                        className="h-2 w-2 rounded-full"
+                        style={{ backgroundColor: item.color }}
+                      />
+                      <span className="text-muted-foreground">{item.name}</span>
+                    </div>
+                    <span className="font-medium">{item.value}</span>
                   </div>
                 ))}
               </div>
             </div>
-          )}
+          </div>
         </div>
 
-        {/* Story Points & Time Tracking Row */}
-        <div className="grid gap-6 xl:grid-cols-2">
-          {/* Story Points by Status */}
-          {stats.storyPointsStats.total > 0 && (
-            <div className="bg-card rounded-2xl border p-6">
-              <div className="mb-6 flex items-center gap-3">
-                <div className="rounded-xl bg-gradient-to-br from-indigo-500/20 to-purple-500/20 p-3">
-                  <Zap className="h-6 w-6 text-indigo-500" />
-                </div>
-                <div>
-                  <h3 className="text-xl font-semibold">Story Points by Status</h3>
-                  <p className="text-muted-foreground text-sm">
-                    Points distribution across workflow
-                  </p>
-                </div>
-              </div>
-              <div className="h-[280px]">
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart
-                    data={[
-                      { name: "Backlog", points: stats.storyPointsStats.byType.backlog },
-                      { name: "To Do", points: stats.storyPointsStats.byType.todo },
-                      { name: "In Progress", points: stats.storyPointsStats.byType.in_progress },
-                      { name: "Review", points: stats.storyPointsStats.byType.review },
-                      { name: "Blocked", points: stats.storyPointsStats.byType.blocked },
-                      { name: "Done", points: stats.storyPointsStats.byType.done },
-                      { name: "Won't Do", points: stats.storyPointsStats.byType.wont_do },
-                    ].filter((d) => d.points > 0)}
-                    margin={{ top: 10, right: 30, left: 10, bottom: 20 }}
-                  >
-                    <defs>
-                      <linearGradient id="pointsGradient" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stopColor="#6366f1" />
-                        <stop offset="100%" stopColor="#8b5cf6" />
-                      </linearGradient>
-                    </defs>
-                    <CartesianGrid
-                      strokeDasharray="3 3"
-                      stroke="hsl(var(--border))"
-                      vertical={false}
-                    />
-                    <XAxis
-                      dataKey="name"
-                      axisLine={false}
-                      tickLine={false}
-                      tick={{ fontSize: 12, fill: "hsl(var(--muted-foreground))" }}
-                      dy={10}
-                    />
-                    <YAxis
-                      allowDecimals={false}
-                      axisLine={false}
-                      tickLine={false}
-                      tick={{ fontSize: 12, fill: "hsl(var(--muted-foreground))" }}
-                    />
-                    <Tooltip
-                      content={<CustomTooltip />}
-                      cursor={{ fill: "hsl(var(--muted))", opacity: 0.3 }}
-                    />
-                    <Bar
-                      dataKey="points"
-                      name="Points"
-                      fill="url(#pointsGradient)"
-                      radius={[8, 8, 0, 0]}
-                      maxBarSize={70}
-                    />
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
-              {/* Story Points Summary */}
-              <div className="mt-4 grid grid-cols-3 gap-4 border-t pt-4">
-                <div className="text-center">
-                  <p className="text-2xl font-bold text-indigo-600 dark:text-indigo-400">
-                    {stats.storyPointsStats.total}
-                  </p>
-                  <p className="text-muted-foreground text-xs">Total Points</p>
-                </div>
-                <div className="text-center">
-                  <p className="text-2xl font-bold text-emerald-600 dark:text-emerald-400">
-                    {stats.storyPointsStats.completed}
-                  </p>
-                  <p className="text-muted-foreground text-xs">Completed</p>
-                </div>
-                <div className="text-center">
-                  <p className="text-2xl font-bold text-amber-600 dark:text-amber-400">
-                    {stats.storyPointsStats.total - stats.storyPointsStats.completed}
-                  </p>
-                  <p className="text-muted-foreground text-xs">Remaining</p>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Time Tracking Overview */}
+        {/* Second Row - Time & Story Points */}
+        <div className="grid gap-4 lg:grid-cols-2">
+          {/* Time Tracking */}
           {stats.timeStats.cardsWithTime > 0 && (
-            <div className="bg-card rounded-2xl border p-6">
-              <div className="mb-6 flex items-center gap-3">
-                <div className="rounded-xl bg-gradient-to-br from-cyan-500/20 to-blue-500/20 p-3">
-                  <Timer className="h-6 w-6 text-cyan-500" />
-                </div>
-                <div>
-                  <h3 className="text-xl font-semibold">Time Tracking</h3>
-                  <p className="text-muted-foreground text-sm">Estimated vs actual time spent</p>
-                </div>
-              </div>
-              <div className="space-y-6">
-                {/* Time Progress Bar */}
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="font-medium">Time Progress</span>
-                    <span className="text-muted-foreground">
-                      {stats.timeStats.totalEstimate > 0
-                        ? `${Math.round((stats.timeStats.totalSpent / stats.timeStats.totalEstimate) * 100)}%`
-                        : "N/A"}
+            <div className="bg-card rounded-xl border p-4">
+              <SectionHeader
+                icon={Timer}
+                title="Time Tracking"
+                subtitle={`${stats.timeStats.cardsWithTime} cards tracked`}
+                iconColor="text-cyan-500"
+              />
+              <div className="flex items-center gap-6">
+                <CompletionRing
+                  completed={stats.timeStats.totalSpent}
+                  total={stats.timeStats.totalEstimate}
+                  label="Time Progress"
+                />
+                <div className="flex-1 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Clock className="h-3.5 w-3.5 text-slate-400" />
+                      <span className="text-muted-foreground text-xs">Estimated</span>
+                    </div>
+                    <span className="font-semibold">
+                      {formatTime(stats.timeStats.totalEstimate)}
                     </span>
                   </div>
-                  <div className="bg-muted h-6 overflow-hidden rounded-full">
-                    <div
-                      className={cn(
-                        "h-full rounded-full transition-all duration-500",
-                        stats.timeStats.totalSpent > stats.timeStats.totalEstimate
-                          ? "bg-gradient-to-r from-red-500 to-red-400"
-                          : "bg-gradient-to-r from-cyan-500 to-blue-500"
-                      )}
-                      style={{
-                        width: `${Math.min(100, stats.timeStats.totalEstimate > 0 ? (stats.timeStats.totalSpent / stats.timeStats.totalEstimate) * 100 : 0)}%`,
-                      }}
-                    />
-                  </div>
-                </div>
-
-                {/* Time Stats Grid */}
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="rounded-xl bg-cyan-500/10 p-5">
-                    <div className="flex items-center gap-3">
-                      <Clock className="h-8 w-8 text-cyan-500" />
-                      <div>
-                        <p className="text-2xl font-bold text-cyan-600 dark:text-cyan-400">
-                          {formatTime(stats.timeStats.totalEstimate)}
-                        </p>
-                        <p className="text-muted-foreground text-sm">Estimated</p>
-                      </div>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Timer className="h-3.5 w-3.5 text-cyan-500" />
+                      <span className="text-muted-foreground text-xs">Spent</span>
                     </div>
+                    <span className="font-semibold">{formatTime(stats.timeStats.totalSpent)}</span>
                   </div>
-                  <div
-                    className={cn(
-                      "rounded-xl p-5",
-                      stats.timeStats.totalSpent > stats.timeStats.totalEstimate
-                        ? "bg-red-500/10"
-                        : "bg-emerald-500/10"
-                    )}
-                  >
-                    <div className="flex items-center gap-3">
-                      <Timer
-                        className={cn(
-                          "h-8 w-8",
-                          stats.timeStats.totalSpent > stats.timeStats.totalEstimate
-                            ? "text-red-500"
-                            : "text-emerald-500"
-                        )}
-                      />
-                      <div>
-                        <p
-                          className={cn(
-                            "text-2xl font-bold",
-                            stats.timeStats.totalSpent > stats.timeStats.totalEstimate
-                              ? "text-red-600 dark:text-red-400"
-                              : "text-emerald-600 dark:text-emerald-400"
-                          )}
-                        >
-                          {formatTime(stats.timeStats.totalSpent)}
-                        </p>
-                        <p className="text-muted-foreground text-sm">Time Spent</p>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Additional Stats */}
-                <div className="flex items-center justify-between border-t pt-4 text-sm">
-                  <span className="text-muted-foreground">Cards with time tracking</span>
-                  <span className="font-semibold">{stats.timeStats.cardsWithTime} cards</span>
-                </div>
-                {stats.timeStats.totalEstimate > 0 && (
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="text-muted-foreground">Time variance</span>
+                  <div className="flex items-center justify-between border-t pt-2">
+                    <span className="text-muted-foreground text-xs">Variance</span>
                     <span
                       className={cn(
-                        "font-semibold",
+                        "text-sm font-bold",
                         stats.timeStats.totalSpent > stats.timeStats.totalEstimate
-                          ? "text-red-600 dark:text-red-400"
-                          : "text-emerald-600 dark:text-emerald-400"
+                          ? "text-red-500"
+                          : "text-emerald-500"
                       )}
                     >
                       {stats.timeStats.totalSpent > stats.timeStats.totalEstimate ? "+" : "-"}
@@ -667,53 +470,207 @@ export function BoardAnalytics({ boardId }: BoardAnalyticsProps) {
                       )}
                     </span>
                   </div>
-                )}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Story Points by Status */}
+          {stats.storyPointsStats.total > 0 && (
+            <div className="bg-card rounded-xl border p-4">
+              <SectionHeader
+                icon={Zap}
+                title="Story Points"
+                subtitle="By workflow status"
+                iconColor="text-indigo-500"
+              />
+              <div className="flex items-center gap-6">
+                <CompletionRing
+                  completed={stats.storyPointsStats.completed}
+                  total={stats.storyPointsStats.total}
+                  label="Completed"
+                />
+                <div className="h-[120px] flex-1">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart
+                      data={[
+                        { name: "Backlog", pts: stats.storyPointsStats.byType.backlog },
+                        { name: "To Do", pts: stats.storyPointsStats.byType.todo },
+                        { name: "In Prog", pts: stats.storyPointsStats.byType.in_progress },
+                        { name: "Review", pts: stats.storyPointsStats.byType.review },
+                        { name: "Done", pts: stats.storyPointsStats.byType.done },
+                      ].filter((d) => d.pts > 0)}
+                      margin={{ top: 5, right: 5, left: -25, bottom: 0 }}
+                    >
+                      <XAxis
+                        dataKey="name"
+                        axisLine={false}
+                        tickLine={false}
+                        tick={{ fontSize: 9, fill: "hsl(var(--muted-foreground))" }}
+                      />
+                      <YAxis
+                        axisLine={false}
+                        tickLine={false}
+                        tick={{ fontSize: 9, fill: "hsl(var(--muted-foreground))" }}
+                        width={25}
+                      />
+                      <Tooltip content={<CustomTooltip />} />
+                      <Bar
+                        dataKey="pts"
+                        name="Points"
+                        fill={COLORS.primary}
+                        radius={[4, 4, 0, 0]}
+                      />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
               </div>
             </div>
           )}
         </div>
 
-        {/* Due Date Overview - Full Width */}
-        <div className="bg-card rounded-2xl border p-6">
-          <div className="mb-6 flex items-center gap-3">
-            <div className="rounded-xl bg-gradient-to-br from-sky-500/20 to-blue-500/20 p-3">
-              <Clock className="h-6 w-6 text-sky-500" />
-            </div>
-            <div>
-              <h3 className="text-xl font-semibold">Due Date Overview</h3>
-              <p className="text-muted-foreground text-sm">Task deadline status</p>
-            </div>
-          </div>
-          <div className="grid gap-6 sm:grid-cols-3">
-            <div className="flex items-center gap-5 rounded-xl bg-red-500/10 p-5">
-              <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-red-500/20">
-                <AlertTriangle className="h-8 w-8 text-red-500" />
+        {/* Third Row - Workload & Cards by Column */}
+        <div className="grid gap-4 lg:grid-cols-2">
+          {/* Workload Distribution */}
+          {stats.assigneeStats.length > 0 && (
+            <div className="bg-card rounded-xl border p-4">
+              <SectionHeader
+                icon={Users}
+                title="Team Workload"
+                subtitle={`${totalAssigned} assigned cards`}
+                iconColor="text-violet-500"
+              />
+              <div className="space-y-2">
+                {stats.assigneeStats.slice(0, 6).map((stat, index) => (
+                  <WorkloadBar
+                    key={stat.userId}
+                    name={stat.name}
+                    count={stat.count}
+                    total={totalAssigned}
+                    color={ASSIGNEE_COLORS[index % ASSIGNEE_COLORS.length]}
+                  />
+                ))}
+                {stats.assigneeStats.length > 6 && (
+                  <p className="text-muted-foreground text-center text-[10px]">
+                    +{stats.assigneeStats.length - 6} more members
+                  </p>
+                )}
               </div>
-              <div>
-                <p className="text-4xl font-bold text-red-600 dark:text-red-400">
+            </div>
+          )}
+
+          {/* Cards per Column */}
+          {stats.cardsPerColumn.length > 0 && (
+            <div className="bg-card rounded-xl border p-4">
+              <SectionHeader icon={Layers} title="Cards by Column" iconColor="text-indigo-500" />
+              <div className="h-[160px]">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart
+                    data={stats.cardsPerColumn}
+                    layout="vertical"
+                    margin={{ top: 0, right: 10, left: 0, bottom: 0 }}
+                  >
+                    <defs>
+                      <linearGradient id="columnGradient" x1="0" y1="0" x2="1" y2="0">
+                        <stop offset="0%" stopColor={COLORS.primary} />
+                        <stop offset="100%" stopColor={COLORS.purple} />
+                      </linearGradient>
+                    </defs>
+                    <XAxis
+                      type="number"
+                      allowDecimals={false}
+                      axisLine={false}
+                      tickLine={false}
+                      tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }}
+                    />
+                    <YAxis
+                      dataKey="name"
+                      type="category"
+                      width={80}
+                      axisLine={false}
+                      tickLine={false}
+                      tick={{ fontSize: 10, fill: "hsl(var(--foreground))" }}
+                    />
+                    <Tooltip
+                      content={<CustomTooltip />}
+                      cursor={{ fill: "hsl(var(--muted))", opacity: 0.3 }}
+                    />
+                    <Bar
+                      dataKey="count"
+                      name="Cards"
+                      fill="url(#columnGradient)"
+                      radius={[0, 4, 4, 0]}
+                      maxBarSize={24}
+                    />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Labels & Due Dates Row */}
+        <div className="grid gap-4 lg:grid-cols-2">
+          {/* Labels */}
+          {stats.labelStats.length > 0 && (
+            <div className="bg-card rounded-xl border p-4">
+              <SectionHeader icon={Tag} title="By Label" iconColor="text-orange-500" />
+              <div className="h-[140px]">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart
+                    data={stats.labelStats}
+                    margin={{ top: 5, right: 10, left: -20, bottom: 15 }}
+                  >
+                    <XAxis
+                      dataKey="name"
+                      axisLine={false}
+                      tickLine={false}
+                      tick={{ fontSize: 9, fill: "hsl(var(--muted-foreground))" }}
+                      angle={-45}
+                      textAnchor="end"
+                      height={40}
+                    />
+                    <YAxis
+                      allowDecimals={false}
+                      axisLine={false}
+                      tickLine={false}
+                      tick={{ fontSize: 9, fill: "hsl(var(--muted-foreground))" }}
+                      width={25}
+                    />
+                    <Tooltip content={<CustomTooltip />} />
+                    <Bar dataKey="count" name="Cards" radius={[4, 4, 0, 0]} maxBarSize={32}>
+                      {stats.labelStats.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={entry.color} />
+                      ))}
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+          )}
+
+          {/* Due Date Summary */}
+          <div className="bg-card rounded-xl border p-4">
+            <SectionHeader icon={Calendar} title="Due Dates" iconColor="text-sky-500" />
+            <div className="grid grid-cols-3 gap-3">
+              <div className="rounded-lg bg-red-500/10 p-3 text-center">
+                <AlertTriangle className="mx-auto h-5 w-5 text-red-500" />
+                <p className="mt-1 text-xl font-bold text-red-600 dark:text-red-400">
                   {stats.dueDateStats.overdue}
                 </p>
-                <p className="text-muted-foreground text-sm">Overdue</p>
+                <p className="text-muted-foreground text-[10px]">Overdue</p>
               </div>
-            </div>
-            <div className="flex items-center gap-5 rounded-xl bg-amber-500/10 p-5">
-              <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-amber-500/20">
-                <Calendar className="h-8 w-8 text-amber-500" />
-              </div>
-              <div>
-                <p className="text-4xl font-bold text-amber-600 dark:text-amber-400">
+              <div className="rounded-lg bg-amber-500/10 p-3 text-center">
+                <Calendar className="mx-auto h-5 w-5 text-amber-500" />
+                <p className="mt-1 text-xl font-bold text-amber-600 dark:text-amber-400">
                   {stats.dueDateStats.dueThisWeek}
                 </p>
-                <p className="text-muted-foreground text-sm">Due This Week</p>
+                <p className="text-muted-foreground text-[10px]">This Week</p>
               </div>
-            </div>
-            <div className="flex items-center gap-5 rounded-xl bg-slate-500/10 p-5">
-              <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-slate-500/20">
-                <Clock className="h-8 w-8 text-slate-500" />
-              </div>
-              <div>
-                <p className="text-4xl font-bold">{stats.dueDateStats.noDueDate}</p>
-                <p className="text-muted-foreground text-sm">No Due Date</p>
+              <div className="rounded-lg bg-slate-500/10 p-3 text-center">
+                <Clock className="mx-auto h-5 w-5 text-slate-400" />
+                <p className="mt-1 text-xl font-bold">{stats.dueDateStats.noDueDate}</p>
+                <p className="text-muted-foreground text-[10px]">No Date</p>
               </div>
             </div>
           </div>
