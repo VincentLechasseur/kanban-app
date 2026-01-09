@@ -27,88 +27,20 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { UserAvatar } from "@/components/UserAvatar";
-import { XAxis, YAxis, Tooltip, ResponsiveContainer, AreaChart, Area } from "recharts";
 import {
   Users,
   Kanban,
   Layers,
   MessageSquare,
-  Activity,
   Shield,
   ShieldOff,
   Trash2,
   Search,
   Globe,
   Lock,
-  TrendingUp,
-  UserPlus,
 } from "lucide-react";
-import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { format } from "date-fns";
-
-// Mini stat card
-function StatCard({
-  icon: Icon,
-  label,
-  value,
-  subtext,
-  color = "default",
-}: {
-  icon: React.ElementType;
-  label: string;
-  value: number | string;
-  subtext?: string;
-  color?: "default" | "blue" | "green" | "purple" | "orange";
-}) {
-  const colorClasses = {
-    default: { icon: "text-slate-500 dark:text-slate-400", bg: "bg-slate-100 dark:bg-slate-800" },
-    blue: { icon: "text-blue-600 dark:text-blue-400", bg: "bg-blue-100 dark:bg-blue-900/40" },
-    green: {
-      icon: "text-emerald-600 dark:text-emerald-400",
-      bg: "bg-emerald-100 dark:bg-emerald-900/40",
-    },
-    purple: {
-      icon: "text-violet-600 dark:text-violet-400",
-      bg: "bg-violet-100 dark:bg-violet-900/40",
-    },
-    orange: {
-      icon: "text-orange-600 dark:text-orange-400",
-      bg: "bg-orange-100 dark:bg-orange-900/40",
-    },
-  };
-  const styles = colorClasses[color];
-
-  return (
-    <div className="bg-card rounded-xl border p-4">
-      <div className="flex items-center gap-3">
-        <div className={cn("rounded-lg p-2.5", styles.bg)}>
-          <Icon className={cn("h-5 w-5", styles.icon)} />
-        </div>
-        <div>
-          <p className="text-muted-foreground text-xs">{label}</p>
-          <p className="text-2xl font-bold">{value}</p>
-          {subtext && <p className="text-muted-foreground text-[10px]">{subtext}</p>}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// Custom tooltip for charts
-function ChartTooltip({ active, payload, label }: any) {
-  if (!active || !payload?.length) return null;
-  return (
-    <div className="bg-popover rounded-lg border px-3 py-2 text-xs shadow-lg">
-      <p className="font-medium">{label}</p>
-      {payload.map((entry: any, i: number) => (
-        <p key={i} className="text-muted-foreground">
-          {entry.name}: <span className="text-foreground font-semibold">{entry.value}</span>
-        </p>
-      ))}
-    </div>
-  );
-}
 
 export function Admin() {
   const isAdmin = useQuery(api.admin.isAdmin);
@@ -126,7 +58,6 @@ export function Admin() {
     name: string;
   } | null>(null);
 
-  // Check admin status
   if (isAdmin === false) {
     return <Navigate to="/" replace />;
   }
@@ -134,10 +65,7 @@ export function Admin() {
   if (isAdmin === undefined || stats === undefined) {
     return (
       <div className="flex h-full items-center justify-center">
-        <div className="flex flex-col items-center gap-2">
-          <div className="border-primary h-8 w-8 animate-spin rounded-full border-2 border-t-transparent" />
-          <p className="text-muted-foreground text-sm">Loading admin dashboard...</p>
-        </div>
+        <div className="border-primary h-6 w-6 animate-spin rounded-full border-2 border-t-transparent" />
       </div>
     );
   }
@@ -179,293 +107,238 @@ export function Admin() {
   };
 
   return (
-    <ScrollArea className="h-full">
-      <div className="space-y-6 p-6">
-        {/* Header */}
-        <div className="flex items-center gap-3">
-          <div className="rounded-xl bg-gradient-to-br from-violet-500 to-purple-600 p-3">
-            <Shield className="h-6 w-6 text-white" />
+    <div className="flex h-full flex-col">
+      {/* Compact Header with Stats */}
+      <div className="border-b px-4 py-3">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Shield className="h-5 w-5 text-violet-600 dark:text-violet-400" />
+            <h1 className="text-lg font-semibold">Admin</h1>
           </div>
-          <div>
-            <h1 className="text-2xl font-bold">Admin Dashboard</h1>
-            <p className="text-muted-foreground text-sm">Platform overview and management</p>
+          <div className="flex items-center gap-4 text-sm">
+            <div className="flex items-center gap-1.5">
+              <Users className="h-3.5 w-3.5 text-blue-500" />
+              <span className="font-medium">{stats.totals.users}</span>
+              <span className="text-muted-foreground">users</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <Kanban className="h-3.5 w-3.5 text-violet-500" />
+              <span className="font-medium">{stats.totals.boards}</span>
+              <span className="text-muted-foreground">boards</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <Layers className="h-3.5 w-3.5 text-orange-500" />
+              <span className="font-medium">{stats.totals.cards}</span>
+              <span className="text-muted-foreground">cards</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <MessageSquare className="h-3.5 w-3.5 text-emerald-500" />
+              <span className="font-medium">{stats.totals.messages}</span>
+              <span className="text-muted-foreground">msgs</span>
+            </div>
           </div>
         </div>
+      </div>
 
-        {/* Stats Overview */}
-        <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-6">
-          <StatCard icon={Users} label="Total Users" value={stats.totals.users} color="blue" />
-          <StatCard
-            icon={UserPlus}
-            label="Active Users"
-            value={stats.totals.activeUsers}
-            subtext="With boards"
-            color="green"
-          />
-          <StatCard icon={Kanban} label="Boards" value={stats.totals.boards} color="purple" />
-          <StatCard icon={Layers} label="Cards" value={stats.totals.cards} color="orange" />
-          <StatCard icon={MessageSquare} label="Messages" value={stats.totals.messages} />
-          <StatCard icon={Activity} label="Activities" value={stats.totals.activities} />
-        </div>
-
-        {/* User Growth Chart */}
-        <div className="bg-card rounded-xl border p-4">
-          <div className="mb-4 flex items-center gap-2">
-            <TrendingUp className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
-            <h3 className="font-semibold">User Growth</h3>
-            <span className="text-muted-foreground text-xs">Last 8 weeks</span>
-          </div>
-          <div className="h-[200px]">
-            <ResponsiveContainer width="100%" height="100%">
-              <AreaChart
-                data={stats.userGrowth}
-                margin={{ top: 5, right: 10, left: -20, bottom: 0 }}
-              >
-                <defs>
-                  <linearGradient id="userGrowthFill" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="#8b5cf6" stopOpacity={0.3} />
-                    <stop offset="100%" stopColor="#8b5cf6" stopOpacity={0.05} />
-                  </linearGradient>
-                </defs>
-                <XAxis dataKey="week" axisLine={false} tickLine={false} tick={{ fontSize: 10 }} />
-                <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10 }} width={30} />
-                <Tooltip content={<ChartTooltip />} />
-                <Area
-                  type="monotone"
-                  dataKey="users"
-                  name="New Users"
-                  stroke="#8b5cf6"
-                  strokeWidth={2}
-                  fill="url(#userGrowthFill)"
-                />
-              </AreaChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
-
-        {/* Quick Stats */}
-        <div className="grid gap-4 md:grid-cols-4">
-          <div className="bg-card flex items-center justify-between rounded-xl border p-4">
-            <div className="flex items-center gap-2">
-              <Globe className="h-4 w-4 text-emerald-500" />
-              <span className="text-sm">Public Boards</span>
-            </div>
-            <span className="text-lg font-bold">{stats.totals.publicBoards}</span>
-          </div>
-          <div className="bg-card flex items-center justify-between rounded-xl border p-4">
-            <div className="flex items-center gap-2">
-              <Lock className="h-4 w-4 text-amber-500" />
-              <span className="text-sm">Private Boards</span>
-            </div>
-            <span className="text-lg font-bold">{stats.totals.privateBoards}</span>
-          </div>
-          <div className="bg-card flex items-center justify-between rounded-xl border p-4">
-            <div className="flex items-center gap-2">
-              <Layers className="h-4 w-4 text-blue-500" />
-              <span className="text-sm">Avg Cards/Board</span>
-            </div>
-            <span className="text-lg font-bold">{stats.averages.cardsPerBoard}</span>
-          </div>
-          <div className="bg-card flex items-center justify-between rounded-xl border p-4">
-            <div className="flex items-center gap-2">
-              <Users className="h-4 w-4 text-violet-500" />
-              <span className="text-sm">Avg Members/Board</span>
-            </div>
-            <span className="text-lg font-bold">{stats.averages.membersPerBoard}</span>
-          </div>
-        </div>
-
-        {/* Tabs for Users and Boards */}
-        <Tabs defaultValue="users" className="space-y-4">
-          <TabsList>
-            <TabsTrigger value="users" className="gap-2">
+      {/* Main Content - Tabs */}
+      <Tabs defaultValue="users" className="flex flex-1 flex-col overflow-hidden">
+        <div className="border-b px-4">
+          <TabsList className="h-10 bg-transparent p-0">
+            <TabsTrigger
+              value="users"
+              className="data-[state=active]:border-primary gap-1.5 rounded-none border-b-2 border-transparent px-3 data-[state=active]:bg-transparent data-[state=active]:shadow-none"
+            >
               <Users className="h-4 w-4" />
-              Users ({users?.length || 0})
+              Users
+              <Badge variant="secondary" className="ml-1 h-5 px-1.5 text-xs">
+                {users?.length || 0}
+              </Badge>
             </TabsTrigger>
-            <TabsTrigger value="boards" className="gap-2">
+            <TabsTrigger
+              value="boards"
+              className="data-[state=active]:border-primary gap-1.5 rounded-none border-b-2 border-transparent px-3 data-[state=active]:bg-transparent data-[state=active]:shadow-none"
+            >
               <Kanban className="h-4 w-4" />
-              Boards ({boards?.length || 0})
+              Boards
+              <Badge variant="secondary" className="ml-1 h-5 px-1.5 text-xs">
+                {boards?.length || 0}
+              </Badge>
             </TabsTrigger>
           </TabsList>
+        </div>
 
-          {/* Users Tab */}
-          <TabsContent value="users" className="space-y-4">
-            <div className="flex items-center gap-2">
+        {/* Users Tab */}
+        <TabsContent value="users" className="mt-0 flex-1 overflow-hidden">
+          <div className="flex h-full flex-col">
+            <div className="flex items-center gap-2 border-b px-4 py-2">
               <Search className="text-muted-foreground h-4 w-4" />
               <Input
                 placeholder="Search users..."
                 value={userSearch}
                 onChange={(e) => setUserSearch(e.target.value)}
-                className="max-w-sm"
+                className="h-8 max-w-xs border-0 bg-transparent px-0 focus-visible:ring-0"
               />
             </div>
-            <div className="bg-card rounded-xl border">
+            <ScrollArea className="flex-1">
               <Table>
                 <TableHeader>
-                  <TableRow>
-                    <TableHead>User</TableHead>
-                    <TableHead>Boards</TableHead>
-                    <TableHead>Cards</TableHead>
-                    <TableHead>Joined</TableHead>
-                    <TableHead>Role</TableHead>
-                    <TableHead className="w-[100px]">Actions</TableHead>
+                  <TableRow className="hover:bg-transparent">
+                    <TableHead className="h-9">User</TableHead>
+                    <TableHead className="h-9">Boards</TableHead>
+                    <TableHead className="h-9">Cards</TableHead>
+                    <TableHead className="h-9">Joined</TableHead>
+                    <TableHead className="h-9">Role</TableHead>
+                    <TableHead className="h-9 w-[100px]">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {filteredUsers?.map((user) => (
                     <TableRow key={user.id}>
-                      <TableCell>
-                        <div className="flex items-center gap-3">
+                      <TableCell className="py-2">
+                        <div className="flex items-center gap-2">
                           <UserAvatar
                             userId={user.id}
                             name={user.name}
                             email={user.email}
                             image={user.image}
-                            className="h-8 w-8"
+                            className="h-7 w-7"
                           />
                           <div>
-                            <p className="font-medium">{user.name}</p>
+                            <p className="text-sm leading-none font-medium">{user.name}</p>
                             <p className="text-muted-foreground text-xs">{user.email}</p>
                           </div>
                         </div>
                       </TableCell>
-                      <TableCell>
-                        <span className="text-sm">
-                          {user.stats.ownedBoards} owned, {user.stats.memberBoards} member
+                      <TableCell className="py-2">
+                        <span className="text-muted-foreground text-xs">
+                          {user.stats.totalBoards}
                         </span>
                       </TableCell>
-                      <TableCell>
-                        <span className="text-sm">
-                          {user.stats.createdCards} created, {user.stats.assignedCards} assigned
+                      <TableCell className="py-2">
+                        <span className="text-muted-foreground text-xs">
+                          {user.stats.createdCards}
                         </span>
                       </TableCell>
-                      <TableCell>
-                        <span className="text-muted-foreground text-sm">
+                      <TableCell className="py-2">
+                        <span className="text-muted-foreground text-xs">
                           {format(user.createdAt, "MMM d, yyyy")}
                         </span>
                       </TableCell>
-                      <TableCell>
+                      <TableCell className="py-2">
                         {user.isAdmin ? (
-                          <Badge className="bg-violet-100 text-violet-700 dark:bg-violet-900/40 dark:text-violet-400">
+                          <Badge className="h-5 bg-violet-100 px-1.5 text-[10px] text-violet-700 dark:bg-violet-900/40 dark:text-violet-400">
                             Admin
                           </Badge>
                         ) : (
-                          <Badge variant="secondary">User</Badge>
+                          <Badge variant="secondary" className="h-5 px-1.5 text-[10px]">
+                            User
+                          </Badge>
                         )}
                       </TableCell>
-                      <TableCell>
+                      <TableCell className="py-2">
                         <Button
                           variant="ghost"
                           size="sm"
                           onClick={() => handleToggleAdmin(user.id, user.isAdmin, user.name)}
-                          className="gap-1"
+                          className="h-7 gap-1 px-2 text-xs"
                         >
                           {user.isAdmin ? (
-                            <>
-                              <ShieldOff className="h-3.5 w-3.5" />
-                              Remove
-                            </>
+                            <ShieldOff className="h-3 w-3" />
                           ) : (
-                            <>
-                              <Shield className="h-3.5 w-3.5" />
-                              Make Admin
-                            </>
+                            <Shield className="h-3 w-3" />
                           )}
+                          {user.isAdmin ? "Remove" : "Make Admin"}
                         </Button>
                       </TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
               </Table>
-            </div>
-          </TabsContent>
+            </ScrollArea>
+          </div>
+        </TabsContent>
 
-          {/* Boards Tab */}
-          <TabsContent value="boards" className="space-y-4">
-            <div className="flex items-center gap-2">
+        {/* Boards Tab */}
+        <TabsContent value="boards" className="mt-0 flex-1 overflow-hidden">
+          <div className="flex h-full flex-col">
+            <div className="flex items-center gap-2 border-b px-4 py-2">
               <Search className="text-muted-foreground h-4 w-4" />
               <Input
                 placeholder="Search boards..."
                 value={boardSearch}
                 onChange={(e) => setBoardSearch(e.target.value)}
-                className="max-w-sm"
+                className="h-8 max-w-xs border-0 bg-transparent px-0 focus-visible:ring-0"
               />
             </div>
-            <div className="bg-card rounded-xl border">
+            <ScrollArea className="flex-1">
               <Table>
                 <TableHeader>
-                  <TableRow>
-                    <TableHead>Board</TableHead>
-                    <TableHead>Owner</TableHead>
-                    <TableHead>Members</TableHead>
-                    <TableHead>Cards</TableHead>
-                    <TableHead>Visibility</TableHead>
-                    <TableHead>Created</TableHead>
-                    <TableHead className="w-[80px]">Actions</TableHead>
+                  <TableRow className="hover:bg-transparent">
+                    <TableHead className="h-9">Board</TableHead>
+                    <TableHead className="h-9">Owner</TableHead>
+                    <TableHead className="h-9">Members</TableHead>
+                    <TableHead className="h-9">Cards</TableHead>
+                    <TableHead className="h-9">Visibility</TableHead>
+                    <TableHead className="h-9">Created</TableHead>
+                    <TableHead className="h-9 w-[60px]"></TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {filteredBoards?.map((board) => (
                     <TableRow key={board.id}>
-                      <TableCell>
+                      <TableCell className="py-2">
                         <div className="flex items-center gap-2">
-                          {board.icon && <span className="text-lg">{board.icon}</span>}
-                          <div>
-                            <p className="font-medium">{board.name}</p>
-                            {board.description && (
-                              <p className="text-muted-foreground max-w-[200px] truncate text-xs">
-                                {board.description}
-                              </p>
-                            )}
-                          </div>
+                          {board.icon && <span>{board.icon}</span>}
+                          <span className="text-sm font-medium">{board.name}</span>
                         </div>
                       </TableCell>
-                      <TableCell>
-                        <div>
-                          <p className="text-sm">{board.owner.name}</p>
-                          <p className="text-muted-foreground text-xs">{board.owner.email}</p>
-                        </div>
+                      <TableCell className="py-2">
+                        <span className="text-muted-foreground text-xs">{board.owner.name}</span>
                       </TableCell>
-                      <TableCell>{board.memberCount}</TableCell>
-                      <TableCell>{board.cardCount}</TableCell>
-                      <TableCell>
+                      <TableCell className="py-2">
+                        <span className="text-muted-foreground text-xs">{board.memberCount}</span>
+                      </TableCell>
+                      <TableCell className="py-2">
+                        <span className="text-muted-foreground text-xs">{board.cardCount}</span>
+                      </TableCell>
+                      <TableCell className="py-2">
                         {board.isPublic ? (
-                          <Badge className="gap-1 bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-400">
-                            <Globe className="h-3 w-3" />
+                          <Badge className="h-5 gap-0.5 bg-emerald-100 px-1.5 text-[10px] text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-400">
+                            <Globe className="h-2.5 w-2.5" />
                             Public
                           </Badge>
                         ) : (
-                          <Badge variant="secondary" className="gap-1">
-                            <Lock className="h-3 w-3" />
+                          <Badge variant="secondary" className="h-5 gap-0.5 px-1.5 text-[10px]">
+                            <Lock className="h-2.5 w-2.5" />
                             Private
                           </Badge>
                         )}
                       </TableCell>
-                      <TableCell>
-                        <span className="text-muted-foreground text-sm">
-                          {format(board.createdAt, "MMM d, yyyy")}
+                      <TableCell className="py-2">
+                        <span className="text-muted-foreground text-xs">
+                          {format(board.createdAt, "MMM d")}
                         </span>
                       </TableCell>
-                      <TableCell>
+                      <TableCell className="py-2">
                         <Button
                           variant="ghost"
                           size="icon"
-                          className="text-destructive hover:bg-destructive/10 h-8 w-8"
+                          className="text-destructive hover:bg-destructive/10 h-7 w-7"
                           onClick={() =>
                             setDeleteTarget({ type: "board", id: board.id, name: board.name })
                           }
                         >
-                          <Trash2 className="h-4 w-4" />
+                          <Trash2 className="h-3.5 w-3.5" />
                         </Button>
                       </TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
               </Table>
-            </div>
-          </TabsContent>
-        </Tabs>
-      </div>
+            </ScrollArea>
+          </div>
+        </TabsContent>
+      </Tabs>
 
       {/* Delete Confirmation Dialog */}
       <AlertDialog open={!!deleteTarget} onOpenChange={() => setDeleteTarget(null)}>
@@ -473,8 +346,7 @@ export function Admin() {
           <AlertDialogHeader>
             <AlertDialogTitle>Delete Board?</AlertDialogTitle>
             <AlertDialogDescription>
-              This will permanently delete "{deleteTarget?.name}" and all its columns, cards,
-              messages, and activities. This action cannot be undone.
+              This will permanently delete "{deleteTarget?.name}" and all its data.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -483,11 +355,11 @@ export function Admin() {
               onClick={handleDeleteBoard}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
-              Delete Board
+              Delete
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </ScrollArea>
+    </div>
   );
 }
