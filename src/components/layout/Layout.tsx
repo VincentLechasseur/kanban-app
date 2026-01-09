@@ -23,14 +23,8 @@ import { CommandPaletteProvider, useCommandPaletteContext } from "@/contexts/Com
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
-const SIDEBAR_COLLAPSED_KEY = "kanban-sidebar-collapsed";
-
 function LayoutContent() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
-    const saved = localStorage.getItem(SIDEBAR_COLLAPSED_KEY);
-    return saved === "true";
-  });
   const [createOpen, setCreateOpen] = useState(false);
   const [helpOpen, setHelpOpen] = useState(false);
   const [name, setName] = useState("");
@@ -39,15 +33,18 @@ function LayoutContent() {
   const [isCreating, setIsCreating] = useState(false);
   const createBoard = useMutation(api.boards.create);
   const boards = useQuery(api.boards.list);
+  const preferences = useQuery(api.users.getPreferences);
+  const updatePreferences = useMutation(api.users.updatePreferences);
   const navigate = useNavigate();
 
   const { setOpen: setCommandPaletteOpen, boardActions } = useCommandPaletteContext();
 
-  // Persist sidebar collapsed state
+  const sidebarCollapsed = preferences?.sidebarCollapsed ?? false;
+
+  // Persist sidebar collapsed state to database
   const toggleSidebarCollapsed = () => {
     const newValue = !sidebarCollapsed;
-    setSidebarCollapsed(newValue);
-    localStorage.setItem(SIDEBAR_COLLAPSED_KEY, String(newValue));
+    updatePreferences({ sidebarCollapsed: newValue });
   };
 
   // Keyboard shortcuts

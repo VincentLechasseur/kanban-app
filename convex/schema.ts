@@ -4,7 +4,7 @@ import { v } from "convex/values";
 
 export default defineSchema({
   ...authTables,
-  // Extend users table with isAdmin field
+  // Extend users table with custom fields
   users: defineTable({
     // Auth fields
     name: v.optional(v.string()),
@@ -14,8 +14,14 @@ export default defineSchema({
     emailVerificationTime: v.optional(v.number()),
     phoneVerificationTime: v.optional(v.number()),
     isAnonymous: v.optional(v.boolean()),
-    // Custom field
+    // Custom fields
     isAdmin: v.optional(v.boolean()),
+    // User preferences
+    preferences: v.optional(
+      v.object({
+        sidebarCollapsed: v.optional(v.boolean()),
+      })
+    ),
   }),
 
   boards: defineTable({

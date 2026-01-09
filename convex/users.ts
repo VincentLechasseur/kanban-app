@@ -112,3 +112,37 @@ export const removeProfileImage = mutation({
     await ctx.db.patch(userId, { image: undefined });
   },
 });
+
+// Get user preferences
+export const getPreferences = query({
+  args: {},
+  handler: async (ctx) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) return null;
+
+    const user = await ctx.db.get(userId);
+    return user?.preferences || { sidebarCollapsed: false };
+  },
+});
+
+// Update user preferences
+export const updatePreferences = mutation({
+  args: {
+    sidebarCollapsed: v.optional(v.boolean()),
+  },
+  handler: async (ctx, args) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) throw new Error("Not authenticated");
+
+    const user = await ctx.db.get(userId);
+    if (!user) throw new Error("User not found");
+
+    const currentPrefs = user.preferences || {};
+    const newPrefs = {
+      ...currentPrefs,
+      ...(args.sidebarCollapsed !== undefined && { sidebarCollapsed: args.sidebarCollapsed }),
+    };
+
+    await ctx.db.patch(userId, { preferences: newPrefs });
+  },
+});
