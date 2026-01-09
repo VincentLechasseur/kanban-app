@@ -41,6 +41,9 @@ export const getBoardStats = query({
         type: col.type,
       }));
 
+    // Built-in column types
+    const builtInTypes = ["backlog", "todo", "in_progress", "review", "blocked", "done", "wont_do"];
+
     // Cards by column type
     const cardsByType = {
       backlog: 0,
@@ -55,8 +58,8 @@ export const getBoardStats = query({
 
     cards.forEach((card) => {
       const column = columns.find((c) => c._id === card.columnId);
-      if (column?.type) {
-        cardsByType[column.type]++;
+      if (column?.type && builtInTypes.includes(column.type)) {
+        cardsByType[column.type as keyof typeof cardsByType]++;
       } else {
         cardsByType.unset++;
       }
@@ -164,8 +167,8 @@ export const getBoardStats = query({
     cards.forEach((card) => {
       const column = columns.find((c) => c._id === card.columnId);
       const points = card.storyPoints ?? 0;
-      if (column?.type) {
-        storyPointsByType[column.type] += points;
+      if (column?.type && builtInTypes.includes(column.type)) {
+        storyPointsByType[column.type as keyof typeof storyPointsByType] += points;
       } else {
         storyPointsByType.unset += points;
       }

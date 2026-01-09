@@ -14,6 +14,17 @@ export default defineSchema({
     isPublic: v.optional(v.boolean()),
     order: v.optional(v.number()),
     createdAt: v.number(),
+    // Custom column types defined by the user
+    customColumnTypes: v.optional(
+      v.array(
+        v.object({
+          id: v.string(),
+          name: v.string(),
+          icon: v.string(),
+          color: v.string(),
+        })
+      )
+    ),
   })
     .index("by_owner", ["ownerId"])
     .index("by_member", ["memberIds"])
@@ -23,18 +34,8 @@ export default defineSchema({
     boardId: v.id("boards"),
     name: v.string(),
     order: v.number(),
-    // Column type for workflow tracking
-    type: v.optional(
-      v.union(
-        v.literal("backlog"),
-        v.literal("todo"),
-        v.literal("in_progress"),
-        v.literal("review"),
-        v.literal("blocked"),
-        v.literal("done"),
-        v.literal("wont_do")
-      )
-    ),
+    // Column type for workflow tracking (built-in or custom type id)
+    type: v.optional(v.string()),
   }).index("by_board", ["boardId"]),
 
   cards: defineTable({

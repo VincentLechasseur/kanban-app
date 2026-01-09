@@ -193,17 +193,8 @@ export const reorder = mutation({
 export const setType = mutation({
   args: {
     id: v.id("columns"),
-    type: v.optional(
-      v.union(
-        v.literal("backlog"),
-        v.literal("todo"),
-        v.literal("in_progress"),
-        v.literal("review"),
-        v.literal("blocked"),
-        v.literal("done"),
-        v.literal("wont_do")
-      )
-    ),
+    // Accept any string type (built-in or custom type id)
+    type: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     const userId = await getAuthUserId(ctx);

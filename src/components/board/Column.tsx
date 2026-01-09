@@ -4,10 +4,11 @@ import { useDroppable } from "@dnd-kit/core";
 import { SortableContext, verticalListSortingStrategy, useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { api } from "../../../convex/_generated/api";
-import type { Doc } from "../../../convex/_generated/dataModel";
+import type { Doc, Id } from "../../../convex/_generated/dataModel";
 import { KanbanCard } from "./Card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { GripVertical } from "lucide-react";
 import {
   DropdownMenu,
@@ -18,6 +19,7 @@ import {
   DropdownMenuSubTrigger,
   DropdownMenuTrigger,
   DropdownMenuSeparator,
+  DropdownMenuLabel,
 } from "@/components/ui/dropdown-menu";
 import {
   AlertDialog,
@@ -29,6 +31,14 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
 import {
@@ -42,6 +52,7 @@ import {
   Pencil,
   Plus,
   Search,
+  Sparkles,
   Trash2,
   X,
   XCircle,
@@ -66,14 +77,36 @@ const COLUMN_TYPES = {
 
 type ColumnType = keyof typeof COLUMN_TYPES;
 
+// Custom type colors
+const CUSTOM_TYPE_COLORS = [
+  "#ef4444",
+  "#f97316",
+  "#eab308",
+  "#22c55e",
+  "#14b8a6",
+  "#0ea5e9",
+  "#6366f1",
+  "#a855f7",
+  "#ec4899",
+];
+
+interface CustomColumnType {
+  id: string;
+  name: string;
+  icon: string;
+  color: string;
+}
+
 interface ColumnProps {
   column: Doc<"columns">;
   cards: Doc<"cards">[];
   isDragging?: boolean;
+  customColumnTypes?: CustomColumnType[];
+  boardId?: Id<"boards">;
 }
 
 // Sortable wrapper for column
-export function SortableColumn({ column, cards }: ColumnProps) {
+export function SortableColumn({ column, cards, customColumnTypes, boardId }: ColumnProps) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: column._id,
   });
@@ -89,6 +122,8 @@ export function SortableColumn({ column, cards }: ColumnProps) {
         column={column}
         cards={cards}
         isDragging={isDragging}
+        customColumnTypes={customColumnTypes}
+        boardId={boardId}
         dragHandleProps={{ ...attributes, ...listeners }}
       />
     </div>
@@ -99,20 +134,35 @@ interface ColumnInternalProps extends ColumnProps {
   dragHandleProps?: Record<string, unknown>;
 }
 
-export function Column({ column, cards, isDragging, dragHandleProps }: ColumnInternalProps) {
+export function Column({
+  column,
+  cards,
+  isDragging,
+  dragHandleProps,
+  customColumnTypes = [],
+  boardId,
+}: ColumnInternalProps) {
   const updateColumn = useMutation(api.columns.update);
   const deleteColumn = useMutation(api.columns.remove);
   const createCard = useMutation(api.cards.create);
   const setColumnType = useMutation(api.columns.setType);
+  const addCustomType = useMutation(api.boards.addCustomColumnType);
 
-  const columnType = column.type as ColumnType | undefined;
-  const typeConfig = columnType ? COLUMN_TYPES[columnType] : null;
+  // Check if type is built-in or custom
+  const isBuiltInType = column.type && column.type in COLUMN_TYPES;
+  const builtInTypeConfig = isBuiltInType ? COLUMN_TYPES[column.type as ColumnType] : null;
+  const customTypeConfig = !isBuiltInType
+    ? customColumnTypes.find((t) => t.id === column.type)
+    : null;
 
   const [isEditing, setIsEditing] = useState(false);
   const [name, setName] = useState(column.name);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [isAddingCard, setIsAddingCard] = useState(false);
   const [newCardTitle, setNewCardTitle] = useState("");
+  const [customTypeDialogOpen, setCustomTypeDialogOpen] = useState(false);
+  const [newTypeName, setNewTypeName] = useState("");
+  const [newTypeColor, setNewTypeColor] = useState(CUSTOM_TYPE_COLORS[0]);
 
   const { setNodeRef, isOver } = useDroppable({
     id: column._id,
@@ -156,14 +206,34 @@ export function Column({ column, cards, isDragging, dragHandleProps }: ColumnInt
     }
   };
 
-  const handleSetType = async (type: ColumnType | undefined) => {
+  const handleSetType = async (type: string | undefined) => {
     try {
       await setColumnType({ id: column._id, type });
-      toast.success(
-        type ? `Column type set to ${COLUMN_TYPES[type].label}` : "Column type cleared"
-      );
+      const isBuiltIn = type && type in COLUMN_TYPES;
+      const typeName = isBuiltIn
+        ? COLUMN_TYPES[type as ColumnType].label
+        : customColumnTypes.find((t) => t.id === type)?.name;
+      toast.success(type ? `Column type set to ${typeName}` : "Column type cleared");
     } catch {
       toast.error("Failed to update column type");
+    }
+  };
+
+  const handleCreateCustomType = async () => {
+    if (!newTypeName.trim() || !boardId) return;
+    try {
+      const typeId = await addCustomType({
+        boardId,
+        name: newTypeName.trim(),
+        icon: "Sparkles",
+        color: newTypeColor,
+      });
+      await setColumnType({ id: column._id, type: typeId });
+      setCustomTypeDialogOpen(false);
+      setNewTypeName("");
+      toast.success(`Created custom type "${newTypeName.trim()}"`);
+    } catch {
+      toast.error("Failed to create custom type");
     }
   };
 
@@ -203,9 +273,17 @@ export function Column({ column, cards, isDragging, dragHandleProps }: ColumnInt
           />
         ) : (
           <div className="flex items-center gap-2">
-            {typeConfig && (
-              <div className={cn("rounded p-1", typeConfig.bg)}>
-                <typeConfig.icon className={cn("h-3.5 w-3.5", typeConfig.color)} />
+            {builtInTypeConfig && (
+              <div className={cn("rounded p-1", builtInTypeConfig.bg)}>
+                <builtInTypeConfig.icon className={cn("h-3.5 w-3.5", builtInTypeConfig.color)} />
+              </div>
+            )}
+            {customTypeConfig && (
+              <div
+                className="rounded p-1"
+                style={{ backgroundColor: `${customTypeConfig.color}20` }}
+              >
+                <Sparkles className="h-3.5 w-3.5" style={{ color: customTypeConfig.color }} />
               </div>
             )}
             <h3 className="font-medium">{column.name}</h3>
@@ -231,23 +309,53 @@ export function Column({ column, cards, isDragging, dragHandleProps }: ColumnInt
                 <Clock className="mr-2 h-4 w-4" />
                 Set Type
               </DropdownMenuSubTrigger>
-              <DropdownMenuSubContent>
+              <DropdownMenuSubContent className="max-h-80 overflow-y-auto">
+                <DropdownMenuLabel className="text-muted-foreground text-xs">
+                  Built-in Types
+                </DropdownMenuLabel>
                 {(
                   Object.entries(COLUMN_TYPES) as [ColumnType, (typeof COLUMN_TYPES)[ColumnType]][]
                 ).map(([type, config]) => (
                   <DropdownMenuItem
                     key={type}
                     onClick={() => handleSetType(type)}
-                    className={cn(columnType === type && "bg-accent")}
+                    className={cn(column.type === type && "bg-accent")}
                   >
                     <config.icon className={cn("mr-2 h-4 w-4", config.color)} />
                     {config.label}
-                    {columnType === type && (
+                    {column.type === type && (
                       <CheckCircle2 className="ml-auto h-4 w-4 text-emerald-500" />
                     )}
                   </DropdownMenuItem>
                 ))}
+                {customColumnTypes.length > 0 && (
+                  <>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuLabel className="text-muted-foreground text-xs">
+                      Custom Types
+                    </DropdownMenuLabel>
+                    {customColumnTypes.map((customType) => (
+                      <DropdownMenuItem
+                        key={customType.id}
+                        onClick={() => handleSetType(customType.id)}
+                        className={cn(column.type === customType.id && "bg-accent")}
+                      >
+                        <Sparkles className="mr-2 h-4 w-4" style={{ color: customType.color }} />
+                        {customType.name}
+                        {column.type === customType.id && (
+                          <CheckCircle2 className="ml-auto h-4 w-4 text-emerald-500" />
+                        )}
+                      </DropdownMenuItem>
+                    ))}
+                  </>
+                )}
                 <DropdownMenuSeparator />
+                {boardId && (
+                  <DropdownMenuItem onClick={() => setCustomTypeDialogOpen(true)}>
+                    <Plus className="mr-2 h-4 w-4" />
+                    Add Custom Type
+                  </DropdownMenuItem>
+                )}
                 <DropdownMenuItem onClick={() => handleSetType(undefined)}>
                   <X className="mr-2 h-4 w-4" />
                   Clear Type
@@ -345,6 +453,64 @@ export function Column({ column, cards, isDragging, dragHandleProps }: ColumnInt
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Create Custom Type Dialog */}
+      <Dialog open={customTypeDialogOpen} onOpenChange={setCustomTypeDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Create Custom Column Type</DialogTitle>
+            <DialogDescription>
+              Create a custom type to categorize your columns. This type will be available for all
+              columns on this board.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="type-name">Name</Label>
+              <Input
+                id="type-name"
+                placeholder="e.g., Testing, Staging, Archive..."
+                value={newTypeName}
+                onChange={(e) => setNewTypeName(e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Color</Label>
+              <div className="flex flex-wrap gap-2">
+                {CUSTOM_TYPE_COLORS.map((color) => (
+                  <button
+                    key={color}
+                    type="button"
+                    className={cn(
+                      "h-8 w-8 rounded-full transition-all",
+                      newTypeColor === color && "ring-2 ring-offset-2"
+                    )}
+                    style={{ backgroundColor: color }}
+                    onClick={() => setNewTypeColor(color)}
+                  />
+                ))}
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label>Preview</Label>
+              <div className="bg-muted flex items-center gap-2 rounded-lg p-3">
+                <div className="rounded p-1" style={{ backgroundColor: `${newTypeColor}20` }}>
+                  <Sparkles className="h-4 w-4" style={{ color: newTypeColor }} />
+                </div>
+                <span className="font-medium">{newTypeName || "Type Name"}</span>
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setCustomTypeDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleCreateCustomType} disabled={!newTypeName.trim()}>
+              Create Type
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

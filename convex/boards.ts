@@ -322,3 +322,101 @@ export const reorder = mutation({
     }
   },
 });
+
+export const addCustomColumnType = mutation({
+  args: {
+    boardId: v.id("boards"),
+    name: v.string(),
+    icon: v.string(),
+    color: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) throw new Error("Not authenticated");
+
+    const board = await ctx.db.get(args.boardId);
+    if (!board) throw new Error("Board not found");
+    if (board.ownerId !== userId) throw new Error("Not authorized");
+
+    const customTypes = board.customColumnTypes ?? [];
+    const newType = {
+      id: `custom_${Date.now()}`,
+      name: args.name,
+      icon: args.icon,
+      color: args.color,
+    };
+
+    await ctx.db.patch(args.boardId, {
+      customColumnTypes: [...customTypes, newType],
+    });
+
+    return newType.id;
+  },
+});
+
+export const updateCustomColumnType = mutation({
+  args: {
+    boardId: v.id("boards"),
+    typeId: v.string(),
+    name: v.optional(v.string()),
+    icon: v.optional(v.string()),
+    color: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) throw new Error("Not authenticated");
+
+    const board = await ctx.db.get(args.boardId);
+    if (!board) throw new Error("Board not found");
+    if (board.ownerId !== userId) throw new Error("Not authorized");
+
+    const customTypes = board.customColumnTypes ?? [];
+    const updatedTypes = customTypes.map((t) => {
+      if (t.id !== args.typeId) return t;
+      return {
+        ...t,
+        name: args.name ?? t.name,
+        icon: args.icon ?? t.icon,
+        color: args.color ?? t.color,
+      };
+    });
+
+    await ctx.db.patch(args.boardId, {
+      customColumnTypes: updatedTypes,
+    });
+  },
+});
+
+export const removeCustomColumnType = mutation({
+  args: {
+    boardId: v.id("boards"),
+    typeId: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) throw new Error("Not authenticated");
+
+    const board = await ctx.db.get(args.boardId);
+    if (!board) throw new Error("Board not found");
+    if (board.ownerId !== userId) throw new Error("Not authorized");
+
+    const customTypes = board.customColumnTypes ?? [];
+    const filteredTypes = customTypes.filter((t) => t.id !== args.typeId);
+
+    await ctx.db.patch(args.boardId, {
+      customColumnTypes: filteredTypes,
+    });
+
+    // Clear the type from any columns using it
+    const columns = await ctx.db
+      .query("columns")
+      .withIndex("by_board", (q) => q.eq("boardId", args.boardId))
+      .collect();
+
+    for (const column of columns) {
+      if (column.type === args.typeId) {
+        await ctx.db.patch(column._id, { type: undefined });
+      }
+    }
+  },
+});

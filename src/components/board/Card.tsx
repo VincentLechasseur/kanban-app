@@ -130,10 +130,20 @@ export function KanbanCard({ card, boardId, isDragging }: KanbanCardProps) {
                       ? "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"
                       : "bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300"
                   )}
+                  title={`${card.timeSpent ? formatTime(card.timeSpent) : "0m"} spent${card.timeEstimate ? ` of ${formatTime(card.timeEstimate)} estimated` : ""}`}
                 >
                   <Clock className="mr-1 h-3 w-3" />
-                  {card.timeSpent ? formatTime(card.timeSpent) : "0m"}
-                  {card.timeEstimate && ` / ${formatTime(card.timeEstimate)}`}
+                  <span className="opacity-70">spent</span>
+                  <span className="mx-1 font-semibold">
+                    {card.timeSpent ? formatTime(card.timeSpent) : "0m"}
+                  </span>
+                  {card.timeEstimate && (
+                    <>
+                      <span className="opacity-50">·</span>
+                      <span className="ml-1 opacity-70">est</span>
+                      <span className="ml-1 font-semibold">{formatTime(card.timeEstimate)}</span>
+                    </>
+                  )}
                 </Badge>
               )}
             </div>

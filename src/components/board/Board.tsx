@@ -29,11 +29,14 @@ interface BoardProps {
 }
 
 export function Board({ boardId, searchQuery = "", selectedAssigneeIds }: BoardProps) {
+  const board = useQuery(api.boards.get, { id: boardId });
   const columns = useQuery(api.columns.list, { boardId });
   const cards = useQuery(api.cards.listByBoard, { boardId });
   const createColumn = useMutation(api.columns.create);
   const moveCard = useMutation(api.cards.move);
   const reorderColumns = useMutation(api.columns.reorder);
+
+  const customColumnTypes = board?.customColumnTypes ?? [];
 
   const [activeCard, setActiveCard] = useState<Doc<"cards"> | null>(null);
   const [activeColumn, setActiveColumn] = useState<Doc<"columns"> | null>(null);
@@ -213,6 +216,8 @@ export function Board({ boardId, searchQuery = "", selectedAssigneeIds }: BoardP
                 key={column._id}
                 column={column}
                 cards={cardsByColumn[column._id] || []}
+                customColumnTypes={customColumnTypes}
+                boardId={boardId}
               />
             ))}
           </SortableContext>
@@ -268,7 +273,13 @@ export function Board({ boardId, searchQuery = "", selectedAssigneeIds }: BoardP
       <DragOverlay>
         {activeCard && <KanbanCard card={activeCard} boardId={boardId} isDragging />}
         {activeColumn && (
-          <Column column={activeColumn} cards={cardsByColumn[activeColumn._id] || []} isDragging />
+          <Column
+            column={activeColumn}
+            cards={cardsByColumn[activeColumn._id] || []}
+            isDragging
+            customColumnTypes={customColumnTypes}
+            boardId={boardId}
+          />
         )}
       </DragOverlay>
     </DndContext>
