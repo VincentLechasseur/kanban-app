@@ -425,8 +425,8 @@ export function BoardChat({ boardId, open, onOpenChange }: BoardChatProps) {
           <button
             key={i}
             className={cn(
-              "font-semibold underline decoration-2 underline-offset-2 transition-opacity hover:opacity-70",
-              isOwn ? "text-white" : "text-foreground"
+              "font-semibold underline underline-offset-2 transition-opacity hover:opacity-70",
+              isOwn ? "text-primary-foreground" : "text-foreground"
             )}
             onClick={(e) => {
               e.stopPropagation();
@@ -442,8 +442,8 @@ export function BoardChat({ boardId, open, onOpenChange }: BoardChatProps) {
           <button
             key={i}
             className={cn(
-              "font-semibold underline decoration-2 underline-offset-2 transition-opacity hover:opacity-70",
-              isOwn ? "text-white" : "text-foreground"
+              "font-semibold underline underline-offset-2 transition-opacity hover:opacity-70",
+              isOwn ? "text-primary-foreground" : "text-foreground"
             )}
             onClick={(e) => {
               e.stopPropagation();
@@ -455,7 +455,10 @@ export function BoardChat({ boardId, open, onOpenChange }: BoardChatProps) {
         );
       } else if (part.startsWith("@[") || part.startsWith("@")) {
         return (
-          <span key={i} className={cn("font-semibold", isOwn ? "text-white" : "text-foreground")}>
+          <span
+            key={i}
+            className={cn("font-semibold", isOwn ? "text-primary-foreground" : "text-foreground")}
+          >
             {part}
           </span>
         );
@@ -470,24 +473,18 @@ export function BoardChat({ boardId, open, onOpenChange }: BoardChatProps) {
       <TooltipProvider>
         <Tooltip>
           <TooltipTrigger asChild>
-            <button
+            <Button
+              size="icon"
               onClick={() => onOpenChange(true)}
-              className={cn(
-                "fixed right-6 bottom-6 z-40",
-                "flex h-14 w-14 items-center justify-center rounded-full",
-                "bg-primary text-primary-foreground",
-                "shadow-lg transition-all duration-200",
-                "hover:scale-105 hover:shadow-xl",
-                "focus:ring-ring focus:ring-2 focus:ring-offset-2 focus:outline-none"
-              )}
+              className="fixed right-6 bottom-6 z-40 h-14 w-14 rounded-full shadow-lg"
             >
               <MessageCircle className="h-6 w-6" />
               {hasUnread && (
-                <span className="absolute -top-1 -right-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-red-500 px-1.5 text-xs font-bold text-white">
+                <span className="bg-destructive text-destructive-foreground absolute -top-1 -right-1 flex h-5 min-w-5 items-center justify-center rounded-full px-1.5 text-xs font-bold">
                   {messages?.filter((m) => m.userId !== currentUser?._id).length ?? ""}
                 </span>
               )}
-            </button>
+            </Button>
           </TooltipTrigger>
           <TooltipContent side="left">
             <p>Team Chat</p>
@@ -497,13 +494,13 @@ export function BoardChat({ boardId, open, onOpenChange }: BoardChatProps) {
 
       {/* Chat Modal */}
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="flex h-[80vh] max-h-[700px] w-full max-w-2xl flex-col gap-0 overflow-hidden p-0">
+        <DialogContent className="flex h-[85vh] w-full max-w-2xl flex-col gap-0 overflow-hidden p-0">
           {/* Header */}
           <DialogHeader className="flex-shrink-0 border-b px-6 py-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-blue-500 to-indigo-600">
-                  <MessageCircle className="h-5 w-5 text-white" />
+                <div className="bg-primary text-primary-foreground flex h-10 w-10 items-center justify-center rounded-full">
+                  <MessageCircle className="h-5 w-5" />
                 </div>
                 <div>
                   <DialogTitle className="text-lg font-semibold">Team Chat</DialogTitle>
@@ -520,7 +517,6 @@ export function BoardChat({ boardId, open, onOpenChange }: BoardChatProps) {
                       <Button
                         variant={searchOpen ? "secondary" : "ghost"}
                         size="icon"
-                        className="h-9 w-9"
                         onClick={() => setSearchOpen(!searchOpen)}
                       >
                         <Search className="h-4 w-4" />
@@ -532,7 +528,7 @@ export function BoardChat({ boardId, open, onOpenChange }: BoardChatProps) {
                 <TooltipProvider>
                   <Tooltip>
                     <TooltipTrigger asChild>
-                      <Button variant="ghost" size="icon" className="h-9 w-9">
+                      <Button variant="ghost" size="icon">
                         <HelpCircle className="h-4 w-4" />
                       </Button>
                     </TooltipTrigger>
@@ -540,16 +536,16 @@ export function BoardChat({ boardId, open, onOpenChange }: BoardChatProps) {
                       <div className="space-y-2 text-sm">
                         <p className="font-semibold">Shortcuts</p>
                         <div className="flex items-center gap-2">
-                          <kbd className="rounded border bg-zinc-100 px-1.5 py-0.5 font-mono text-xs dark:bg-zinc-800">
+                          <kbd className="bg-muted rounded border px-1.5 py-0.5 font-mono text-xs">
                             @
                           </kbd>
                           <span>Mention a team member</span>
                         </div>
                         <div className="flex items-center gap-2">
-                          <kbd className="rounded border bg-zinc-100 px-1.5 py-0.5 font-mono text-xs dark:bg-zinc-800">
+                          <kbd className="bg-muted rounded border px-1.5 py-0.5 font-mono text-xs">
                             !
                           </kbd>
-                          <span>Reference a card</span>
+                          <span>Reference a card (clickable)</span>
                         </div>
                       </div>
                     </TooltipContent>
@@ -561,7 +557,7 @@ export function BoardChat({ boardId, open, onOpenChange }: BoardChatProps) {
 
           {/* Search Panel */}
           {searchOpen && (
-            <div className="flex-shrink-0 border-b bg-zinc-50/50 p-4 dark:bg-zinc-900/50">
+            <div className="bg-muted/50 flex-shrink-0 border-b p-4">
               <div className="flex gap-2">
                 <div className="relative flex-1">
                   <Search className="text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
@@ -628,8 +624,8 @@ export function BoardChat({ boardId, open, onOpenChange }: BoardChatProps) {
                 </div>
               ) : messages.length === 0 ? (
                 <div className="flex h-64 flex-col items-center justify-center text-center">
-                  <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-br from-blue-100 to-indigo-100 dark:from-blue-900/30 dark:to-indigo-900/30">
-                    <MessageCircle className="h-8 w-8 text-blue-600 dark:text-blue-400" />
+                  <div className="bg-muted mb-4 flex h-16 w-16 items-center justify-center rounded-full">
+                    <MessageCircle className="text-muted-foreground h-8 w-8" />
                   </div>
                   <h3 className="mb-1 font-medium">No messages yet</h3>
                   <p className="text-muted-foreground text-sm">
@@ -672,7 +668,7 @@ export function BoardChat({ boardId, open, onOpenChange }: BoardChatProps) {
                                 name={message.user.name}
                                 email={message.user.email}
                                 image={message.user.image}
-                                className="h-9 w-9 flex-shrink-0 ring-2 ring-white dark:ring-zinc-900"
+                                className="ring-background h-9 w-9 flex-shrink-0 ring-2"
                                 fallbackClassName="text-xs"
                               />
                               <div
@@ -689,7 +685,7 @@ export function BoardChat({ boardId, open, onOpenChange }: BoardChatProps) {
                                 </span>
 
                                 {isDeleted ? (
-                                  <div className="rounded-2xl border border-dashed bg-zinc-100/50 px-4 py-2.5 dark:bg-zinc-800/50">
+                                  <div className="bg-muted/50 rounded-lg border border-dashed px-3 py-2">
                                     <p className="text-muted-foreground text-sm italic">
                                       Message deleted
                                     </p>
@@ -707,21 +703,15 @@ export function BoardChat({ boardId, open, onOpenChange }: BoardChatProps) {
                                           cancelEditing();
                                         }
                                       }}
-                                      className="h-9 text-sm"
+                                      className="text-sm"
                                       autoFocus
                                     />
                                     <div className="flex gap-1.5">
-                                      <Button
-                                        size="sm"
-                                        variant="ghost"
-                                        className="h-7 px-2.5 text-xs"
-                                        onClick={cancelEditing}
-                                      >
+                                      <Button size="sm" variant="ghost" onClick={cancelEditing}>
                                         Cancel
                                       </Button>
                                       <Button
                                         size="sm"
-                                        className="h-7 px-2.5 text-xs"
                                         onClick={saveEdit}
                                         disabled={!editContent.trim()}
                                       >
@@ -734,13 +724,11 @@ export function BoardChat({ boardId, open, onOpenChange }: BoardChatProps) {
                                   <div className="relative">
                                     <div
                                       className={cn(
-                                        "rounded-2xl px-4 py-2.5",
-                                        isOwn
-                                          ? "bg-gradient-to-br from-blue-500 to-indigo-600 text-white"
-                                          : "bg-zinc-100 dark:bg-zinc-800"
+                                        "rounded-lg px-3 py-2",
+                                        isOwn ? "bg-primary text-primary-foreground" : "bg-muted"
                                       )}
                                     >
-                                      <p className="text-sm leading-relaxed break-words whitespace-pre-wrap">
+                                      <p className="text-sm break-words whitespace-pre-wrap">
                                         {renderMessageContent(message.content, isOwn)}
                                       </p>
                                     </div>
@@ -801,21 +789,21 @@ export function BoardChat({ boardId, open, onOpenChange }: BoardChatProps) {
           </ScrollArea>
 
           {/* Input Area */}
-          <div className="flex-shrink-0 border-t bg-zinc-50/50 p-4 dark:bg-zinc-900/50">
+          <div className="bg-muted/30 flex-shrink-0 border-t p-4">
             {/* Typing indicator */}
             {typingUsers && typingUsers.length > 0 && (
               <div className="text-muted-foreground mb-3 flex items-center gap-2 text-sm">
                 <div className="flex gap-0.5">
                   <span
-                    className="inline-block h-1.5 w-1.5 animate-bounce rounded-full bg-blue-500"
+                    className="bg-primary inline-block h-1.5 w-1.5 animate-bounce rounded-full"
                     style={{ animationDelay: "0ms" }}
                   />
                   <span
-                    className="inline-block h-1.5 w-1.5 animate-bounce rounded-full bg-blue-500"
+                    className="bg-primary inline-block h-1.5 w-1.5 animate-bounce rounded-full"
                     style={{ animationDelay: "150ms" }}
                   />
                   <span
-                    className="inline-block h-1.5 w-1.5 animate-bounce rounded-full bg-blue-500"
+                    className="bg-primary inline-block h-1.5 w-1.5 animate-bounce rounded-full"
                     style={{ animationDelay: "300ms" }}
                   />
                 </div>
@@ -831,8 +819,8 @@ export function BoardChat({ boardId, open, onOpenChange }: BoardChatProps) {
 
             {/* Mention suggestions */}
             {mentionType && suggestions.length > 0 && (
-              <div className="bg-popover mb-3 max-h-48 overflow-y-auto rounded-xl border p-1.5 shadow-lg">
-                <div className="text-muted-foreground px-2.5 py-1.5 text-xs font-semibold tracking-wide uppercase">
+              <div className="bg-popover mb-3 max-h-48 overflow-y-auto rounded-lg border p-1 shadow-lg">
+                <div className="text-muted-foreground px-2 py-1 text-xs font-medium">
                   {mentionType === "user" ? "Team Members" : "Cards"}
                 </div>
                 {mentionType === "user"
@@ -840,7 +828,7 @@ export function BoardChat({ boardId, open, onOpenChange }: BoardChatProps) {
                       <button
                         key={user._id}
                         className={cn(
-                          "flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm transition-colors",
+                          "flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-sm transition-colors",
                           index === selectedIndex
                             ? "bg-accent text-accent-foreground"
                             : "hover:bg-accent/50"
@@ -858,7 +846,7 @@ export function BoardChat({ boardId, open, onOpenChange }: BoardChatProps) {
                       <button
                         key={card._id}
                         className={cn(
-                          "flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm transition-colors",
+                          "flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-sm transition-colors",
                           index === selectedIndex
                             ? "bg-accent text-accent-foreground"
                             : "hover:bg-accent/50"
@@ -873,25 +861,18 @@ export function BoardChat({ boardId, open, onOpenChange }: BoardChatProps) {
             )}
 
             {/* Message input */}
-            <div className="flex items-center gap-3">
-              <div className="relative flex-1">
-                <Input
-                  ref={inputRef}
-                  placeholder="Write a message..."
-                  value={content}
-                  onChange={handleInputChange}
-                  onKeyDown={handleKeyDown}
-                  disabled={isSending}
-                  className="rounded-full border-zinc-200 bg-white py-5 pr-4 pl-4 shadow-sm dark:border-zinc-700 dark:bg-zinc-800"
-                />
-              </div>
-              <Button
-                size="icon"
-                className="h-10 w-10 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 shadow-md transition-transform hover:scale-105 hover:from-blue-600 hover:to-indigo-700"
-                onClick={handleSend}
-                disabled={!content.trim() || isSending}
-              >
-                <Send className="h-4 w-4 text-white" />
+            <div className="flex items-center gap-2">
+              <Input
+                ref={inputRef}
+                placeholder="Type a message... (@ to mention, ! for cards)"
+                value={content}
+                onChange={handleInputChange}
+                onKeyDown={handleKeyDown}
+                disabled={isSending}
+                className="flex-1"
+              />
+              <Button size="icon" onClick={handleSend} disabled={!content.trim() || isSending}>
+                <Send className="h-4 w-4" />
               </Button>
             </div>
           </div>
