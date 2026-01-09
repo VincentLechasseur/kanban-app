@@ -27,16 +27,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { UserAvatar } from "@/components/UserAvatar";
-import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  Tooltip,
-  ResponsiveContainer,
-  AreaChart,
-  Area,
-} from "recharts";
+import { XAxis, YAxis, Tooltip, ResponsiveContainer, AreaChart, Area } from "recharts";
 import {
   Users,
   Kanban,
@@ -217,76 +208,38 @@ export function Admin() {
           <StatCard icon={Activity} label="Activities" value={stats.totals.activities} />
         </div>
 
-        {/* Charts Row */}
-        <div className="grid gap-6 lg:grid-cols-2">
-          {/* User Growth */}
-          <div className="bg-card rounded-xl border p-4">
-            <div className="mb-4 flex items-center gap-2">
-              <TrendingUp className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
-              <h3 className="font-semibold">User Growth</h3>
-              <span className="text-muted-foreground text-xs">Last 8 weeks</span>
-            </div>
-            <div className="h-[200px]">
-              <ResponsiveContainer width="100%" height="100%">
-                <AreaChart
-                  data={stats.userGrowth}
-                  margin={{ top: 5, right: 10, left: -20, bottom: 0 }}
-                >
-                  <defs>
-                    <linearGradient id="userGrowthFill" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor="#8b5cf6" stopOpacity={0.3} />
-                      <stop offset="100%" stopColor="#8b5cf6" stopOpacity={0.05} />
-                    </linearGradient>
-                  </defs>
-                  <XAxis dataKey="week" axisLine={false} tickLine={false} tick={{ fontSize: 10 }} />
-                  <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10 }} width={30} />
-                  <Tooltip content={<ChartTooltip />} />
-                  <Area
-                    type="monotone"
-                    dataKey="users"
-                    name="New Users"
-                    stroke="#8b5cf6"
-                    strokeWidth={2}
-                    fill="url(#userGrowthFill)"
-                  />
-                </AreaChart>
-              </ResponsiveContainer>
-            </div>
+        {/* User Growth Chart */}
+        <div className="bg-card rounded-xl border p-4">
+          <div className="mb-4 flex items-center gap-2">
+            <TrendingUp className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+            <h3 className="font-semibold">User Growth</h3>
+            <span className="text-muted-foreground text-xs">Last 8 weeks</span>
           </div>
-
-          {/* Top Boards */}
-          <div className="bg-card rounded-xl border p-4">
-            <div className="mb-4 flex items-center gap-2">
-              <Kanban className="h-4 w-4 text-indigo-600 dark:text-indigo-400" />
-              <h3 className="font-semibold">Top Boards by Cards</h3>
-            </div>
-            <div className="h-[200px]">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart
-                  data={stats.topBoards.slice(0, 5)}
-                  layout="vertical"
-                  margin={{ top: 0, right: 10, left: 0, bottom: 0 }}
-                >
-                  <XAxis type="number" axisLine={false} tickLine={false} tick={{ fontSize: 10 }} />
-                  <YAxis
-                    dataKey="name"
-                    type="category"
-                    width={100}
-                    axisLine={false}
-                    tickLine={false}
-                    tick={{ fontSize: 10 }}
-                  />
-                  <Tooltip content={<ChartTooltip />} />
-                  <Bar
-                    dataKey="cardCount"
-                    name="Cards"
-                    fill="#6366f1"
-                    radius={[0, 4, 4, 0]}
-                    maxBarSize={20}
-                  />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
+          <div className="h-[200px]">
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart
+                data={stats.userGrowth}
+                margin={{ top: 5, right: 10, left: -20, bottom: 0 }}
+              >
+                <defs>
+                  <linearGradient id="userGrowthFill" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="#8b5cf6" stopOpacity={0.3} />
+                    <stop offset="100%" stopColor="#8b5cf6" stopOpacity={0.05} />
+                  </linearGradient>
+                </defs>
+                <XAxis dataKey="week" axisLine={false} tickLine={false} tick={{ fontSize: 10 }} />
+                <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10 }} width={30} />
+                <Tooltip content={<ChartTooltip />} />
+                <Area
+                  type="monotone"
+                  dataKey="users"
+                  name="New Users"
+                  stroke="#8b5cf6"
+                  strokeWidth={2}
+                  fill="url(#userGrowthFill)"
+                />
+              </AreaChart>
+            </ResponsiveContainer>
           </div>
         </div>
 
