@@ -33,13 +33,26 @@ export const request = mutation({
       throw new Error("You already have a pending request for this board");
     }
 
-    return await ctx.db.insert("joinRequests", {
+    const requestId = await ctx.db.insert("joinRequests", {
       boardId: args.boardId,
       userId,
       status: "pending",
       message: args.message,
       createdAt: Date.now(),
     });
+
+    // Notify the board owner
+    await ctx.db.insert("notifications", {
+      userId: board.ownerId,
+      type: "join_request",
+      fromUserId: userId,
+      boardId: args.boardId,
+      joinRequestId: requestId,
+      read: false,
+      createdAt: Date.now(),
+    });
+
+    return requestId;
   },
 });
 
@@ -145,6 +158,17 @@ export const accept = mutation({
       status: "accepted",
       resolvedAt: Date.now(),
     });
+
+    // Notify the requester
+    await ctx.db.insert("notifications", {
+      userId: request.userId,
+      type: "join_request_accepted",
+      fromUserId: userId,
+      boardId: request.boardId,
+      joinRequestId: args.requestId,
+      read: false,
+      createdAt: Date.now(),
+    });
   },
 });
 
@@ -166,6 +190,17 @@ export const reject = mutation({
     await ctx.db.patch(args.requestId, {
       status: "rejected",
       resolvedAt: Date.now(),
+    });
+
+    // Notify the requester
+    await ctx.db.insert("notifications", {
+      userId: request.userId,
+      type: "join_request_rejected",
+      fromUserId: userId,
+      boardId: request.boardId,
+      joinRequestId: args.requestId,
+      read: false,
+      createdAt: Date.now(),
     });
   },
 });

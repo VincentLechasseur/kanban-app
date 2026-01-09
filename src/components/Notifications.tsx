@@ -7,7 +7,99 @@ import { UserAvatar } from "@/components/UserAvatar";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Spinner } from "@/components/ui/spinner";
-import { Bell, CheckCheck, MessageSquare, MessageCircle, Trash2 } from "lucide-react";
+import {
+  Bell,
+  CheckCheck,
+  MessageSquare,
+  MessageCircle,
+  Trash2,
+  UserPlus,
+  UserCheck,
+  UserX,
+} from "lucide-react";
+
+type NotificationType =
+  | "mention"
+  | "chat_mention"
+  | "assignment"
+  | "join_request"
+  | "join_request_accepted"
+  | "join_request_rejected";
+
+// Notification icon based on type
+function NotificationIcon({ type }: { type: NotificationType }) {
+  switch (type) {
+    case "chat_mention":
+      return <MessageCircle className="h-3 w-3 text-blue-500" />;
+    case "mention":
+      return <MessageSquare className="h-3 w-3 text-green-500" />;
+    case "join_request":
+      return <UserPlus className="h-3 w-3 text-orange-500" />;
+    case "join_request_accepted":
+      return <UserCheck className="h-3 w-3 text-emerald-500" />;
+    case "join_request_rejected":
+      return <UserX className="h-3 w-3 text-red-500" />;
+    default:
+      return <Bell className="h-3 w-3 text-gray-500" />;
+  }
+}
+
+// Notification message based on type
+function NotificationMessage({
+  notification,
+}: {
+  notification: {
+    type: NotificationType;
+    fromUser: { name?: string; email?: string };
+    card?: { title: string } | null;
+    board: { name: string };
+  };
+}) {
+  const userName = notification.fromUser.name ?? notification.fromUser.email;
+
+  switch (notification.type) {
+    case "chat_mention":
+      return (
+        <>
+          <span className="font-medium">{userName}</span> mentioned you in chat
+        </>
+      );
+    case "mention":
+      return (
+        <>
+          <span className="font-medium">{userName}</span> mentioned you in{" "}
+          <span className="font-medium">{notification.card?.title}</span>
+        </>
+      );
+    case "join_request":
+      return (
+        <>
+          <span className="font-medium">{userName}</span> requested to join{" "}
+          <span className="font-medium">{notification.board.name}</span>
+        </>
+      );
+    case "join_request_accepted":
+      return (
+        <>
+          <span className="font-medium">{userName}</span> accepted your request to join{" "}
+          <span className="font-medium">{notification.board.name}</span>
+        </>
+      );
+    case "join_request_rejected":
+      return (
+        <>
+          <span className="font-medium">{userName}</span> declined your request to join{" "}
+          <span className="font-medium">{notification.board.name}</span>
+        </>
+      );
+    default:
+      return (
+        <>
+          <span className="font-medium">{userName}</span> sent you a notification
+        </>
+      );
+  }
+}
 
 export function Notifications() {
   const navigate = useNavigate();
@@ -25,11 +117,14 @@ export function Notifications() {
 
     setOpen(false);
 
-    // Navigate to the board with query params to open the card or chat
+    // Navigate based on notification type
     if (notification.type === "chat_mention") {
       navigate(`/board/${notification.boardId}?chat=true`);
     } else if (notification.type === "mention" && notification.card) {
       navigate(`/board/${notification.boardId}?card=${notification.card._id}`);
+    } else if (notification.type === "join_request") {
+      // Navigate to board with members modal open
+      navigate(`/board/${notification.boardId}?members=true`);
     } else {
       navigate(`/board/${notification.boardId}`);
     }
@@ -98,29 +193,21 @@ export function Notifications() {
                     />
                     {/* Icon badge to indicate notification type */}
                     <div className="bg-background absolute -right-1 -bottom-1 rounded-full p-0.5">
-                      {notification.type === "chat_mention" ? (
-                        <MessageCircle className="h-3 w-3 text-blue-500" />
-                      ) : (
-                        <MessageSquare className="h-3 w-3 text-green-500" />
-                      )}
+                      <NotificationIcon type={notification.type as NotificationType} />
                     </div>
                   </div>
                   <div className="min-w-0 flex-1">
                     <p className="text-sm">
-                      <span className="font-medium">
-                        {notification.fromUser.name ?? notification.fromUser.email}
-                      </span>{" "}
-                      {notification.type === "chat_mention" ? (
-                        <>mentioned you in chat</>
-                      ) : (
-                        <>
-                          mentioned you in{" "}
-                          <span className="font-medium">{notification.card?.title}</span>
-                        </>
-                      )}
+                      <NotificationMessage
+                        notification={{
+                          type: notification.type as NotificationType,
+                          fromUser: notification.fromUser,
+                          card: notification.card,
+                          board: notification.board,
+                        }}
+                      />
                     </p>
                     <p className="text-muted-foreground mt-0.5 text-xs">
-                      {notification.board.name} •{" "}
                       {formatDistanceToNow(new Date(notification.createdAt), { addSuffix: true })}
                     </p>
                   </div>
