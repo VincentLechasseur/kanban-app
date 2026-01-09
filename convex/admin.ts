@@ -21,8 +21,7 @@ export const isAdmin = query({
     if (!userId) return false;
 
     const user = await ctx.db.get(userId);
-    // isAdmin is stored as extra field not in schema
-    return (user as any)?.isAdmin === true;
+    return user?.isAdmin === true;
   },
 });
 
@@ -148,7 +147,7 @@ export const listUsers = query({
         name: user.name || "Unknown",
         email: user.email || "",
         image: user.image,
-        isAdmin: (user as any).isAdmin || false,
+        isAdmin: user.isAdmin || false,
         createdAt: user._creationTime,
         stats: {
           ownedBoards,
@@ -175,7 +174,7 @@ export const setUserAdmin = mutation({
 
     await ctx.db.patch(args.userId, {
       isAdmin: args.isAdmin,
-    } as any);
+    });
 
     return { success: true };
   },

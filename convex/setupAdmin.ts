@@ -15,7 +15,7 @@ export const makeAdmin = mutation({
       throw new Error(`User with email ${args.email} not found`);
     }
 
-    await ctx.db.patch(user._id, { isAdmin: true } as any);
+    await ctx.db.patch(user._id, { isAdmin: true });
 
     return { success: true, userId: user._id, email: args.email };
   },
