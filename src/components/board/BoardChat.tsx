@@ -4,8 +4,16 @@ import { api } from "../../../convex/_generated/api";
 import type { Doc, Id } from "../../../convex/_generated/dataModel";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { ScrollArea } from "@/components/ui/scroll-area";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Separator } from "@/components/ui/separator";
+import { Badge } from "@/components/ui/badge";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { UserAvatar } from "@/components/UserAvatar";
 import { CardModal } from "@/components/board/CardModal";
@@ -22,8 +30,36 @@ import {
   Search,
   Check,
   X,
+  Smile,
+  AtSign,
+  Hash,
+  Keyboard,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+
+// Common emojis for quick access
+const QUICK_EMOJIS = [
+  "👍",
+  "👎",
+  "❤️",
+  "🎉",
+  "🚀",
+  "✅",
+  "❌",
+  "🔥",
+  "💡",
+  "⭐",
+  "😊",
+  "😂",
+  "🤔",
+  "👀",
+  "💪",
+  "🙏",
+  "👏",
+  "🎯",
+  "💯",
+  "⚡",
+];
 
 interface BoardChatProps {
   boardId: Id<"boards">;
@@ -72,9 +108,13 @@ export function BoardChat({ boardId, open, onOpenChange }: BoardChatProps) {
     searchQuery.trim() ? { boardId, query: searchQuery } : "skip"
   );
 
+  // Emoji picker state
+  const [emojiPickerOpen, setEmojiPickerOpen] = useState(false);
+
   // Typing indicator debounce
   const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  const messagesEndRef = useRef<HTMLDivElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -87,8 +127,8 @@ export function BoardChat({ boardId, open, onOpenChange }: BoardChatProps) {
 
   // Scroll to bottom when messages change
   useEffect(() => {
-    if (scrollContainerRef.current && open) {
-      scrollContainerRef.current.scrollTop = scrollContainerRef.current.scrollHeight;
+    if (messagesEndRef.current && open) {
+      messagesEndRef.current.scrollIntoView({ behavior: "smooth" });
     }
   }, [messages, open]);
 
@@ -345,6 +385,12 @@ export function BoardChat({ boardId, open, onOpenChange }: BoardChatProps) {
     inputRef.current?.focus();
   };
 
+  const insertEmoji = (emoji: string) => {
+    setContent((prev) => prev + emoji);
+    setEmojiPickerOpen(false);
+    inputRef.current?.focus();
+  };
+
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (mentionType && suggestions.length > 0) {
       if (e.key === "ArrowDown") {
@@ -494,7 +540,7 @@ export function BoardChat({ boardId, open, onOpenChange }: BoardChatProps) {
 
       {/* Chat Modal */}
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="flex h-[85vh] w-full max-w-2xl flex-col gap-0 overflow-hidden p-0">
+        <DialogContent className="flex h-[90vh] w-full max-w-3xl flex-col gap-0 overflow-hidden p-0">
           {/* Header */}
           <DialogHeader className="flex-shrink-0 border-b px-6 py-4">
             <div className="flex items-center justify-between">
@@ -504,13 +550,14 @@ export function BoardChat({ boardId, open, onOpenChange }: BoardChatProps) {
                 </div>
                 <div>
                   <DialogTitle className="text-lg font-semibold">Team Chat</DialogTitle>
-                  <p className="text-muted-foreground flex items-center gap-1.5 text-sm">
+                  <DialogDescription className="flex items-center gap-1.5 text-sm">
                     <Users className="h-3.5 w-3.5" />
-                    {members?.length ?? 0} members
-                  </p>
+                    {members?.length ?? 0} members online
+                  </DialogDescription>
                 </div>
               </div>
               <div className="flex items-center gap-1">
+                {/* Search button */}
                 <TooltipProvider>
                   <Tooltip>
                     <TooltipTrigger asChild>
@@ -525,32 +572,75 @@ export function BoardChat({ boardId, open, onOpenChange }: BoardChatProps) {
                     <TooltipContent>Search messages</TooltipContent>
                   </Tooltip>
                 </TooltipProvider>
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button variant="ghost" size="icon">
-                        <HelpCircle className="h-4 w-4" />
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent side="bottom" className="max-w-xs">
-                      <div className="space-y-2 text-sm">
-                        <p className="font-semibold">Shortcuts</p>
-                        <div className="flex items-center gap-2">
-                          <kbd className="bg-muted rounded border px-1.5 py-0.5 font-mono text-xs">
+
+                {/* Help button */}
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button variant="ghost" size="icon">
+                      <HelpCircle className="h-4 w-4" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-80" align="end">
+                    <div className="space-y-4">
+                      <div className="flex items-center gap-2">
+                        <Keyboard className="h-5 w-5" />
+                        <h4 className="font-semibold">Chat Shortcuts</h4>
+                      </div>
+                      <Separator />
+                      <div className="space-y-3">
+                        <div className="flex items-start gap-3">
+                          <Badge variant="secondary" className="font-mono">
                             @
-                          </kbd>
-                          <span>Mention a team member</span>
+                          </Badge>
+                          <div>
+                            <p className="text-sm font-medium">Mention a user</p>
+                            <p className="text-muted-foreground text-xs">
+                              Type @ followed by a name to mention and notify a team member
+                            </p>
+                          </div>
                         </div>
-                        <div className="flex items-center gap-2">
-                          <kbd className="bg-muted rounded border px-1.5 py-0.5 font-mono text-xs">
+                        <div className="flex items-start gap-3">
+                          <Badge variant="secondary" className="font-mono">
                             !
-                          </kbd>
-                          <span>Reference a card (clickable)</span>
+                          </Badge>
+                          <div>
+                            <p className="text-sm font-medium">Reference a card</p>
+                            <p className="text-muted-foreground text-xs">
+                              Type ! followed by a card title to create a clickable link
+                            </p>
+                          </div>
+                        </div>
+                        <div className="flex items-start gap-3">
+                          <Badge variant="secondary" className="font-mono">
+                            Enter
+                          </Badge>
+                          <div>
+                            <p className="text-sm font-medium">Send message</p>
+                            <p className="text-muted-foreground text-xs">
+                              Press Enter to send your message
+                            </p>
+                          </div>
+                        </div>
+                        <div className="flex items-start gap-3">
+                          <Badge variant="secondary" className="font-mono">
+                            Esc
+                          </Badge>
+                          <div>
+                            <p className="text-sm font-medium">Cancel</p>
+                            <p className="text-muted-foreground text-xs">
+                              Press Escape to close suggestions or cancel editing
+                            </p>
+                          </div>
                         </div>
                       </div>
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
+                    </div>
+                  </PopoverContent>
+                </Popover>
+
+                {/* Close button */}
+                <Button variant="ghost" size="icon" onClick={() => onOpenChange(false)}>
+                  <X className="h-4 w-4" />
+                </Button>
               </div>
             </div>
           </DialogHeader>
@@ -615,178 +705,188 @@ export function BoardChat({ boardId, open, onOpenChange }: BoardChatProps) {
             </div>
           )}
 
+          {/* Shortcuts bar */}
+          <div className="bg-muted/30 flex flex-shrink-0 items-center gap-4 border-b px-4 py-2">
+            <div className="text-muted-foreground flex items-center gap-1.5 text-xs">
+              <AtSign className="h-3 w-3" />
+              <span>@mention users</span>
+            </div>
+            <div className="text-muted-foreground flex items-center gap-1.5 text-xs">
+              <Hash className="h-3 w-3" />
+              <span>!link cards</span>
+            </div>
+            <div className="text-muted-foreground flex items-center gap-1.5 text-xs">
+              <Smile className="h-3 w-3" />
+              <span>Add emojis</span>
+            </div>
+          </div>
+
           {/* Messages Area */}
-          <ScrollArea className="flex-1">
-            <div ref={scrollContainerRef} className="p-6">
-              {messages === undefined ? (
-                <div className="flex h-64 items-center justify-center">
-                  <Spinner />
+          <div ref={scrollContainerRef} className="flex-1 overflow-y-auto p-6">
+            {messages === undefined ? (
+              <div className="flex h-full items-center justify-center">
+                <Spinner />
+              </div>
+            ) : messages.length === 0 ? (
+              <div className="flex h-full flex-col items-center justify-center text-center">
+                <div className="bg-muted mb-4 flex h-16 w-16 items-center justify-center rounded-full">
+                  <MessageCircle className="text-muted-foreground h-8 w-8" />
                 </div>
-              ) : messages.length === 0 ? (
-                <div className="flex h-64 flex-col items-center justify-center text-center">
-                  <div className="bg-muted mb-4 flex h-16 w-16 items-center justify-center rounded-full">
-                    <MessageCircle className="text-muted-foreground h-8 w-8" />
-                  </div>
-                  <h3 className="mb-1 font-medium">No messages yet</h3>
-                  <p className="text-muted-foreground text-sm">
-                    Start a conversation with your team
-                  </p>
-                </div>
-              ) : (
-                <div className="space-y-6">
-                  {groupedMessages.map((group) => (
-                    <div key={group.date}>
-                      {/* Date divider */}
-                      <div className="relative mb-4 flex items-center justify-center">
-                        <div className="bg-border absolute inset-x-0 h-px" />
-                        <span className="bg-background text-muted-foreground relative px-3 text-xs font-medium">
-                          {group.date}
-                        </span>
-                      </div>
+                <h3 className="mb-1 font-medium">No messages yet</h3>
+                <p className="text-muted-foreground text-sm">Start a conversation with your team</p>
+              </div>
+            ) : (
+              <div className="space-y-6">
+                {groupedMessages.map((group) => (
+                  <div key={group.date}>
+                    {/* Date divider */}
+                    <div className="relative mb-4 flex items-center justify-center">
+                      <div className="bg-border absolute inset-x-0 h-px" />
+                      <Badge variant="secondary" className="relative">
+                        {group.date}
+                      </Badge>
+                    </div>
 
-                      {/* Messages for this date */}
-                      <div className="space-y-4">
-                        {group.messages.map((message) => {
-                          const isOwn = message.userId === currentUser?._id;
-                          const isEditing = editingMessageId === message._id;
-                          const isDeleted = message.isDeleted;
-                          const isHighlighted = highlightedMessageId === message._id;
+                    {/* Messages for this date */}
+                    <div className="space-y-4">
+                      {group.messages.map((message) => {
+                        const isOwn = message.userId === currentUser?._id;
+                        const isEditing = editingMessageId === message._id;
+                        const isDeleted = message.isDeleted;
+                        const isHighlighted = highlightedMessageId === message._id;
 
-                          return (
-                            <div
-                              key={message._id}
-                              data-message-id={message._id}
-                              className={cn(
-                                "group flex gap-3",
-                                isOwn && "flex-row-reverse",
-                                isHighlighted &&
-                                  "animate-pulse rounded-lg bg-yellow-100/50 p-2 dark:bg-yellow-900/20"
-                              )}
-                            >
-                              <UserAvatar
-                                userId={message.user._id}
-                                name={message.user.name}
-                                email={message.user.email}
-                                image={message.user.image}
-                                className="ring-background h-9 w-9 flex-shrink-0 ring-2"
-                                fallbackClassName="text-xs"
-                              />
-                              <div
-                                className={cn("flex max-w-[75%] flex-col", isOwn && "items-end")}
+                        return (
+                          <div
+                            key={message._id}
+                            data-message-id={message._id}
+                            className={cn(
+                              "group flex gap-3",
+                              isOwn && "flex-row-reverse",
+                              isHighlighted && "bg-accent/50 rounded-lg p-2"
+                            )}
+                          >
+                            <UserAvatar
+                              userId={message.user._id}
+                              name={message.user.name}
+                              email={message.user.email}
+                              image={message.user.image}
+                              className="ring-background h-9 w-9 flex-shrink-0 ring-2"
+                              fallbackClassName="text-xs"
+                            />
+                            <div className={cn("flex max-w-[70%] flex-col", isOwn && "items-end")}>
+                              {/* Sender name */}
+                              <span
+                                className={cn(
+                                  "text-muted-foreground mb-1 text-xs font-medium",
+                                  isOwn && "text-right"
+                                )}
                               >
-                                {/* Sender name */}
+                                {message.user.name ?? message.user.email}
+                              </span>
+
+                              {isDeleted ? (
+                                <div className="bg-muted/50 rounded-lg border border-dashed px-3 py-2">
+                                  <p className="text-muted-foreground text-sm italic">
+                                    Message deleted
+                                  </p>
+                                </div>
+                              ) : isEditing ? (
+                                <div className="flex flex-col gap-2">
+                                  <Input
+                                    value={editContent}
+                                    onChange={(e) => setEditContent(e.target.value)}
+                                    onKeyDown={(e) => {
+                                      if (e.key === "Enter") {
+                                        e.preventDefault();
+                                        saveEdit();
+                                      } else if (e.key === "Escape") {
+                                        cancelEditing();
+                                      }
+                                    }}
+                                    className="text-sm"
+                                    autoFocus
+                                  />
+                                  <div className="flex gap-1.5">
+                                    <Button size="sm" variant="ghost" onClick={cancelEditing}>
+                                      Cancel
+                                    </Button>
+                                    <Button
+                                      size="sm"
+                                      onClick={saveEdit}
+                                      disabled={!editContent.trim()}
+                                    >
+                                      <Check className="mr-1 h-3 w-3" />
+                                      Save
+                                    </Button>
+                                  </div>
+                                </div>
+                              ) : (
+                                <div className="relative">
+                                  <div
+                                    className={cn(
+                                      "rounded-lg px-3 py-2",
+                                      isOwn ? "bg-primary text-primary-foreground" : "bg-muted"
+                                    )}
+                                  >
+                                    <p className="text-sm break-words whitespace-pre-wrap">
+                                      {renderMessageContent(message.content, isOwn)}
+                                    </p>
+                                  </div>
+
+                                  {/* Edit/Delete buttons */}
+                                  {isOwn && (
+                                    <div
+                                      className={cn(
+                                        "absolute top-1/2 flex -translate-y-1/2 gap-0.5 opacity-0 transition-opacity group-hover:opacity-100",
+                                        isOwn ? "-left-16" : "-right-16"
+                                      )}
+                                    >
+                                      <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        className="h-7 w-7"
+                                        onClick={() => startEditing(message._id, message.content)}
+                                      >
+                                        <Pencil className="h-3.5 w-3.5" />
+                                      </Button>
+                                      <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        className="hover:text-destructive h-7 w-7"
+                                        onClick={() => handleDelete(message._id)}
+                                      >
+                                        <Trash2 className="h-3.5 w-3.5" />
+                                      </Button>
+                                    </div>
+                                  )}
+                                </div>
+                              )}
+
+                              {/* Timestamp */}
+                              {!isDeleted && !isEditing && (
                                 <span
                                   className={cn(
-                                    "text-muted-foreground mb-1 text-xs font-medium",
+                                    "text-muted-foreground mt-1 text-xs",
                                     isOwn && "text-right"
                                   )}
                                 >
-                                  {message.user.name ?? message.user.email}
+                                  {formatTime(message.createdAt)}
+                                  {message.editedAt && (
+                                    <span className="ml-1 italic">(edited)</span>
+                                  )}
                                 </span>
-
-                                {isDeleted ? (
-                                  <div className="bg-muted/50 rounded-lg border border-dashed px-3 py-2">
-                                    <p className="text-muted-foreground text-sm italic">
-                                      Message deleted
-                                    </p>
-                                  </div>
-                                ) : isEditing ? (
-                                  <div className="flex flex-col gap-2">
-                                    <Input
-                                      value={editContent}
-                                      onChange={(e) => setEditContent(e.target.value)}
-                                      onKeyDown={(e) => {
-                                        if (e.key === "Enter") {
-                                          e.preventDefault();
-                                          saveEdit();
-                                        } else if (e.key === "Escape") {
-                                          cancelEditing();
-                                        }
-                                      }}
-                                      className="text-sm"
-                                      autoFocus
-                                    />
-                                    <div className="flex gap-1.5">
-                                      <Button size="sm" variant="ghost" onClick={cancelEditing}>
-                                        Cancel
-                                      </Button>
-                                      <Button
-                                        size="sm"
-                                        onClick={saveEdit}
-                                        disabled={!editContent.trim()}
-                                      >
-                                        <Check className="mr-1 h-3 w-3" />
-                                        Save
-                                      </Button>
-                                    </div>
-                                  </div>
-                                ) : (
-                                  <div className="relative">
-                                    <div
-                                      className={cn(
-                                        "rounded-lg px-3 py-2",
-                                        isOwn ? "bg-primary text-primary-foreground" : "bg-muted"
-                                      )}
-                                    >
-                                      <p className="text-sm break-words whitespace-pre-wrap">
-                                        {renderMessageContent(message.content, isOwn)}
-                                      </p>
-                                    </div>
-
-                                    {/* Edit/Delete buttons */}
-                                    {isOwn && (
-                                      <div
-                                        className={cn(
-                                          "absolute top-1/2 flex -translate-y-1/2 gap-0.5 opacity-0 transition-opacity group-hover:opacity-100",
-                                          isOwn ? "-left-16" : "-right-16"
-                                        )}
-                                      >
-                                        <Button
-                                          variant="ghost"
-                                          size="icon"
-                                          className="h-7 w-7"
-                                          onClick={() => startEditing(message._id, message.content)}
-                                        >
-                                          <Pencil className="h-3.5 w-3.5" />
-                                        </Button>
-                                        <Button
-                                          variant="ghost"
-                                          size="icon"
-                                          className="hover:text-destructive h-7 w-7"
-                                          onClick={() => handleDelete(message._id)}
-                                        >
-                                          <Trash2 className="h-3.5 w-3.5" />
-                                        </Button>
-                                      </div>
-                                    )}
-                                  </div>
-                                )}
-
-                                {/* Timestamp */}
-                                {!isDeleted && !isEditing && (
-                                  <span
-                                    className={cn(
-                                      "text-muted-foreground mt-1 text-xs",
-                                      isOwn && "text-right"
-                                    )}
-                                  >
-                                    {formatTime(message.createdAt)}
-                                    {message.editedAt && (
-                                      <span className="ml-1 italic">(edited)</span>
-                                    )}
-                                  </span>
-                                )}
-                              </div>
+                              )}
                             </div>
-                          );
-                        })}
-                      </div>
+                          </div>
+                        );
+                      })}
                     </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          </ScrollArea>
+                  </div>
+                ))}
+                <div ref={messagesEndRef} />
+              </div>
+            )}
+          </div>
 
           {/* Input Area */}
           <div className="bg-muted/30 flex-shrink-0 border-t p-4">
@@ -860,19 +960,46 @@ export function BoardChat({ boardId, open, onOpenChange }: BoardChatProps) {
               </div>
             )}
 
-            {/* Message input */}
+            {/* Message input row */}
             <div className="flex items-center gap-2">
+              {/* Emoji picker */}
+              <Popover open={emojiPickerOpen} onOpenChange={setEmojiPickerOpen}>
+                <PopoverTrigger asChild>
+                  <Button variant="ghost" size="icon" className="flex-shrink-0">
+                    <Smile className="h-5 w-5" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-80 p-2" align="start">
+                  <div className="grid grid-cols-10 gap-1">
+                    {QUICK_EMOJIS.map((emoji) => (
+                      <button
+                        key={emoji}
+                        type="button"
+                        className="hover:bg-muted flex h-8 w-8 items-center justify-center rounded text-lg transition-colors"
+                        onClick={() => insertEmoji(emoji)}
+                      >
+                        {emoji}
+                      </button>
+                    ))}
+                  </div>
+                </PopoverContent>
+              </Popover>
+
+              {/* Input */}
               <Input
                 ref={inputRef}
-                placeholder="Type a message... (@ to mention, ! for cards)"
+                placeholder="Type a message..."
                 value={content}
                 onChange={handleInputChange}
                 onKeyDown={handleKeyDown}
                 disabled={isSending}
                 className="flex-1"
               />
-              <Button size="icon" onClick={handleSend} disabled={!content.trim() || isSending}>
-                <Send className="h-4 w-4" />
+
+              {/* Send button */}
+              <Button onClick={handleSend} disabled={!content.trim() || isSending}>
+                <Send className="mr-2 h-4 w-4" />
+                Send
               </Button>
             </div>
           </div>
