@@ -103,10 +103,17 @@ interface ColumnProps {
   isDragging?: boolean;
   customColumnTypes?: CustomColumnType[];
   boardId?: Id<"boards">;
+  compactView?: boolean;
 }
 
 // Sortable wrapper for column
-export function SortableColumn({ column, cards, customColumnTypes, boardId }: ColumnProps) {
+export function SortableColumn({
+  column,
+  cards,
+  customColumnTypes,
+  boardId,
+  compactView,
+}: ColumnProps) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: column._id,
   });
@@ -124,6 +131,7 @@ export function SortableColumn({ column, cards, customColumnTypes, boardId }: Co
         isDragging={isDragging}
         customColumnTypes={customColumnTypes}
         boardId={boardId}
+        compactView={compactView}
         dragHandleProps={{ ...attributes, ...listeners }}
       />
     </div>
@@ -141,6 +149,7 @@ export function Column({
   dragHandleProps,
   customColumnTypes = [],
   boardId,
+  compactView = false,
 }: ColumnInternalProps) {
   const updateColumn = useMutation(api.columns.update);
   const deleteColumn = useMutation(api.columns.remove);
@@ -240,13 +249,16 @@ export function Column({
   return (
     <div
       className={cn(
-        "bg-card flex h-full w-72 shrink-0 flex-col rounded-lg border",
+        "bg-card flex h-full shrink-0 flex-col rounded-lg border transition-all",
+        compactView ? "w-52" : "w-72",
         isOver && "ring-primary ring-2",
         isDragging && "shadow-xl"
       )}
     >
       {/* Column Header */}
-      <div className="flex items-center justify-between border-b p-3">
+      <div
+        className={cn("flex items-center justify-between border-b", compactView ? "p-2" : "p-3")}
+      >
         {/* Drag Handle */}
         {dragHandleProps && (
           <div
@@ -274,20 +286,32 @@ export function Column({
         ) : (
           <div className="flex items-center gap-2">
             {builtInTypeConfig && (
-              <div className={cn("rounded p-1", builtInTypeConfig.bg)}>
-                <builtInTypeConfig.icon className={cn("h-3.5 w-3.5", builtInTypeConfig.color)} />
+              <div className={cn("rounded", compactView ? "p-0.5" : "p-1", builtInTypeConfig.bg)}>
+                <builtInTypeConfig.icon
+                  className={cn(compactView ? "h-3 w-3" : "h-3.5 w-3.5", builtInTypeConfig.color)}
+                />
               </div>
             )}
             {customTypeConfig && (
               <div
-                className="rounded p-1"
+                className={cn("rounded", compactView ? "p-0.5" : "p-1")}
                 style={{ backgroundColor: `${customTypeConfig.color}20` }}
               >
-                <Sparkles className="h-3.5 w-3.5" style={{ color: customTypeConfig.color }} />
+                <Sparkles
+                  className={cn(compactView ? "h-3 w-3" : "h-3.5 w-3.5")}
+                  style={{ color: customTypeConfig.color }}
+                />
               </div>
             )}
-            <h3 className="font-medium">{column.name}</h3>
-            <span className="bg-muted text-muted-foreground rounded px-1.5 py-0.5 text-xs">
+            <h3 className={cn("font-medium", compactView && "max-w-[100px] truncate text-sm")}>
+              {column.name}
+            </h3>
+            <span
+              className={cn(
+                "bg-muted text-muted-foreground rounded",
+                compactView ? "px-1 py-0 text-[10px]" : "px-1.5 py-0.5 text-xs"
+              )}
+            >
               {cards.length}
             </span>
           </div>
@@ -374,9 +398,14 @@ export function Column({
       {/* Cards */}
       <ScrollArea className="flex-1 p-2" ref={setNodeRef}>
         <SortableContext items={cards.map((c) => c._id)} strategy={verticalListSortingStrategy}>
-          <div className="space-y-2">
+          <div className={cn("space-y-2", compactView && "space-y-1.5")}>
             {cards.map((card) => (
-              <KanbanCard key={card._id} card={card} boardId={column.boardId} />
+              <KanbanCard
+                key={card._id}
+                card={card}
+                boardId={column.boardId}
+                compactView={compactView}
+              />
             ))}
           </div>
         </SortableContext>
@@ -387,9 +416,9 @@ export function Column({
       </ScrollArea>
 
       {/* Add Card */}
-      <div className="border-t p-2">
+      <div className={cn("border-t", compactView ? "p-1.5" : "p-2")}>
         {isAddingCard ? (
-          <div className="space-y-2">
+          <div className={cn(compactView ? "space-y-1.5" : "space-y-2")}>
             <Input
               autoFocus
               placeholder="Card title..."
@@ -402,9 +431,14 @@ export function Column({
                   setNewCardTitle("");
                 }
               }}
+              className={cn(compactView && "h-7 text-xs")}
             />
             <div className="flex gap-2">
-              <Button size="sm" onClick={handleAddCard}>
+              <Button
+                size="sm"
+                onClick={handleAddCard}
+                className={cn(compactView && "h-6 px-2 text-xs")}
+              >
                 Add
               </Button>
               <Button
@@ -414,8 +448,9 @@ export function Column({
                   setIsAddingCard(false);
                   setNewCardTitle("");
                 }}
+                className={cn(compactView && "h-6 w-6 p-0")}
               >
-                <X className="h-4 w-4" />
+                <X className={cn(compactView ? "h-3 w-3" : "h-4 w-4")} />
               </Button>
             </div>
           </div>
@@ -423,10 +458,13 @@ export function Column({
           <Button
             variant="ghost"
             size="sm"
-            className="text-muted-foreground w-full justify-start"
+            className={cn(
+              "text-muted-foreground w-full justify-start",
+              compactView && "h-6 text-xs"
+            )}
             onClick={() => setIsAddingCard(true)}
           >
-            <Plus className="mr-2 h-4 w-4" />
+            <Plus className={cn(compactView ? "mr-1 h-3 w-3" : "mr-2 h-4 w-4")} />
             Add card
           </Button>
         )}

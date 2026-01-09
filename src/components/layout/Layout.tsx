@@ -21,9 +21,11 @@ import { KeyboardShortcutsDialog, useKeyboardShortcuts } from "@/components/Keyb
 import { CommandPalette } from "@/components/CommandPalette";
 import { CommandPaletteProvider, useCommandPaletteContext } from "@/contexts/CommandPaletteContext";
 import { toast } from "sonner";
+import { cn } from "@/lib/utils";
 
 function LayoutContent() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [createOpen, setCreateOpen] = useState(false);
   const [helpOpen, setHelpOpen] = useState(false);
   const [name, setName] = useState("");
@@ -80,14 +82,23 @@ function LayoutContent() {
 
       <div className="flex flex-1 overflow-hidden">
         {/* Desktop Sidebar */}
-        <aside className="bg-card hidden w-64 border-r lg:block">
-          <Sidebar onCreateBoard={openCreateDialog} />
+        <aside
+          className={cn(
+            "bg-card hidden border-r transition-all duration-300 lg:block",
+            sidebarCollapsed ? "w-16" : "w-64"
+          )}
+        >
+          <Sidebar
+            onCreateBoard={openCreateDialog}
+            collapsed={sidebarCollapsed}
+            onToggleCollapse={() => setSidebarCollapsed(!sidebarCollapsed)}
+          />
         </aside>
 
         {/* Mobile Sidebar */}
         <Sheet open={sidebarOpen} onOpenChange={setSidebarOpen}>
           <SheetContent side="left" className="w-64 p-0">
-            <Sidebar onCreateBoard={openCreateDialog} />
+            <Sidebar onCreateBoard={openCreateDialog} collapsed={false} />
           </SheetContent>
         </Sheet>
 

@@ -46,10 +46,12 @@ import {
   Activity,
   BarChart3,
   Globe,
+  LayoutGrid,
   Lock,
   MoreHorizontal,
   Pencil,
   Search,
+  StretchHorizontal,
   Trash2,
   UserCircle2,
   Users,
@@ -100,6 +102,7 @@ export function BoardPage() {
   // Filter state
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedAssigneeIds, setSelectedAssigneeIds] = useState<Set<Id<"users">>>(new Set());
+  const [compactView, setCompactView] = useState(false);
   const searchInputRef = useRef<HTMLInputElement>(null);
 
   // Command palette integration
@@ -403,6 +406,29 @@ export function BoardPage() {
             </div>
           </TooltipProvider>
 
+          {/* Compact View Toggle */}
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant={compactView ? "secondary" : "ghost"}
+                  size="icon"
+                  className="h-8 w-8"
+                  onClick={() => setCompactView(!compactView)}
+                >
+                  {compactView ? (
+                    <StretchHorizontal className="h-4 w-4" />
+                  ) : (
+                    <LayoutGrid className="h-4 w-4" />
+                  )}
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>{compactView ? "Normal view" : "Compact view"}</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+
           <div className="bg-border h-6 w-px" />
         </div>
 
@@ -502,6 +528,7 @@ export function BoardPage() {
         boardId={board._id}
         searchQuery={searchQuery}
         selectedAssigneeIds={selectedAssigneeIds}
+        compactView={compactView}
       />
 
       {/* Members Modal */}

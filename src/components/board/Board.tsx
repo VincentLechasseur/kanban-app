@@ -21,14 +21,21 @@ import { Input } from "@/components/ui/input";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { Plus, X } from "lucide-react";
 import { toast } from "sonner";
+import { cn } from "@/lib/utils";
 
 interface BoardProps {
   boardId: Id<"boards">;
   searchQuery?: string;
   selectedAssigneeIds?: Set<Id<"users">>;
+  compactView?: boolean;
 }
 
-export function Board({ boardId, searchQuery = "", selectedAssigneeIds }: BoardProps) {
+export function Board({
+  boardId,
+  searchQuery = "",
+  selectedAssigneeIds,
+  compactView = false,
+}: BoardProps) {
   const board = useQuery(api.boards.get, { id: boardId });
   const columns = useQuery(api.columns.list, { boardId });
   const cards = useQuery(api.cards.listByBoard, { boardId });
@@ -218,12 +225,13 @@ export function Board({ boardId, searchQuery = "", selectedAssigneeIds }: BoardP
                 cards={cardsByColumn[column._id] || []}
                 customColumnTypes={customColumnTypes}
                 boardId={boardId}
+                compactView={compactView}
               />
             ))}
           </SortableContext>
 
           {/* Add Column */}
-          <div className="w-72 shrink-0">
+          <div className={cn("shrink-0", compactView ? "w-52" : "w-72")}>
             {isAddingColumn ? (
               <div className="bg-card rounded-lg border p-3">
                 <Input
@@ -271,7 +279,9 @@ export function Board({ boardId, searchQuery = "", selectedAssigneeIds }: BoardP
       </ScrollArea>
 
       <DragOverlay>
-        {activeCard && <KanbanCard card={activeCard} boardId={boardId} isDragging />}
+        {activeCard && (
+          <KanbanCard card={activeCard} boardId={boardId} isDragging compactView={compactView} />
+        )}
         {activeColumn && (
           <Column
             column={activeColumn}
@@ -279,6 +289,7 @@ export function Board({ boardId, searchQuery = "", selectedAssigneeIds }: BoardP
             isDragging
             customColumnTypes={customColumnTypes}
             boardId={boardId}
+            compactView={compactView}
           />
         )}
       </DragOverlay>
