@@ -115,13 +115,22 @@ export function BoardPage() {
   // Command palette integration
   const { registerBoardActions, clearBoardActions } = useCommandPaletteContext();
 
-  // Handle URL params for opening chat from notifications
+  // Handle URL params for opening chat/members from notifications
   useEffect(() => {
+    if (!board) return;
+
     const shouldOpenChat = searchParams.get("chat") === "true";
-    if (shouldOpenChat && board) {
+    const shouldOpenMembers = searchParams.get("members") === "true";
+
+    if (shouldOpenChat) {
       setChatState("expanded");
-      // Clear the param after opening
       searchParams.delete("chat");
+      setSearchParams(searchParams, { replace: true });
+    }
+
+    if (shouldOpenMembers) {
+      setMembersOpen(true);
+      searchParams.delete("members");
       setSearchParams(searchParams, { replace: true });
     }
   }, [searchParams, setSearchParams, board]);
@@ -472,11 +481,16 @@ export function BoardPage() {
               <Button
                 variant="outline"
                 size="sm"
-                className="ml-2"
+                className="relative ml-2"
                 onClick={() => setMembersOpen(true)}
               >
                 <Users className="mr-2 h-4 w-4" />
                 {members?.length ?? 0}
+                {isOwner && pendingRequestCount !== undefined && pendingRequestCount > 0 && (
+                  <span className="bg-destructive text-destructive-foreground absolute -top-1.5 -right-1.5 flex h-5 min-w-5 items-center justify-center rounded-full px-1 text-xs font-medium">
+                    {pendingRequestCount > 9 ? "9+" : pendingRequestCount}
+                  </span>
+                )}
               </Button>
             </div>
           </TooltipProvider>
