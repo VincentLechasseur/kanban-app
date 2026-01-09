@@ -112,36 +112,36 @@ function MiniStat({
 }) {
   const colorClasses = {
     default: {
-      icon: "text-slate-500",
-      bg: "bg-slate-500/10",
+      icon: "text-slate-500 dark:text-slate-400",
+      bg: "bg-slate-100 dark:bg-slate-800",
       value: "text-foreground",
     },
     success: {
-      icon: "text-emerald-500",
-      bg: "bg-emerald-500/10",
-      value: "text-emerald-600 dark:text-emerald-400",
+      icon: "text-emerald-600 dark:text-emerald-400",
+      bg: "bg-emerald-100 dark:bg-emerald-900/40",
+      value: "text-emerald-700 dark:text-emerald-400",
     },
     warning: {
-      icon: "text-amber-500",
-      bg: "bg-amber-500/10",
-      value: "text-amber-600 dark:text-amber-400",
+      icon: "text-amber-600 dark:text-amber-400",
+      bg: "bg-amber-100 dark:bg-amber-900/40",
+      value: "text-amber-700 dark:text-amber-400",
     },
     danger: {
-      icon: "text-red-500",
-      bg: "bg-red-500/10",
-      value: "text-red-600 dark:text-red-400",
+      icon: "text-red-600 dark:text-red-400",
+      bg: "bg-red-100 dark:bg-red-900/40",
+      value: "text-red-700 dark:text-red-400",
     },
     info: {
-      icon: "text-blue-500",
-      bg: "bg-blue-500/10",
-      value: "text-blue-600 dark:text-blue-400",
+      icon: "text-blue-600 dark:text-blue-400",
+      bg: "bg-blue-100 dark:bg-blue-900/40",
+      value: "text-blue-700 dark:text-blue-400",
     },
   };
 
   const styles = colorClasses[color];
 
   return (
-    <div className="bg-card hover:bg-accent/50 group flex items-center gap-3 rounded-xl border p-3 transition-colors">
+    <div className="bg-card flex items-center gap-3 rounded-xl border p-3">
       <div className={cn("rounded-lg p-2", styles.bg)}>
         <Icon className={cn("h-4 w-4", styles.icon)} />
       </div>
@@ -234,11 +234,11 @@ function WorkloadBar({
   const percentage = total > 0 ? (count / total) * 100 : 0;
 
   return (
-    <div className="group flex items-center gap-2">
+    <div className="flex items-center gap-2">
       <span className="w-20 truncate text-xs font-medium">{name}</span>
-      <div className="bg-muted h-2 flex-1 overflow-hidden rounded-full">
+      <div className="h-2 flex-1 overflow-hidden rounded-full bg-slate-200 dark:bg-slate-700">
         <div
-          className="h-full rounded-full transition-all duration-500 group-hover:opacity-80"
+          className="h-full rounded-full transition-all duration-500"
           style={{ width: `${percentage}%`, backgroundColor: color }}
         />
       </div>
@@ -333,7 +333,7 @@ export function BoardAnalytics({ boardId }: BoardAnalyticsProps) {
                 icon={TrendingUp}
                 title="Team Velocity"
                 subtitle="Cards completed per week"
-                iconColor="text-emerald-500"
+                iconColor="text-emerald-600 dark:text-emerald-400"
               />
               <div className="h-[180px]">
                 <ResponsiveContainer width="100%" height="100%">
@@ -380,7 +380,11 @@ export function BoardAnalytics({ boardId }: BoardAnalyticsProps) {
 
           {/* Status Distribution - Pie + Legend */}
           <div className="bg-card rounded-xl border p-4">
-            <SectionHeader icon={Target} title="Status Distribution" iconColor="text-indigo-500" />
+            <SectionHeader
+              icon={Target}
+              title="Status Distribution"
+              iconColor="text-indigo-600 dark:text-indigo-400"
+            />
             <div className="flex items-center gap-4">
               <div className="h-[140px] w-[140px]">
                 <ResponsiveContainer width="100%" height="100%">
@@ -429,7 +433,7 @@ export function BoardAnalytics({ boardId }: BoardAnalyticsProps) {
                 icon={Timer}
                 title="Time Tracking"
                 subtitle={`${stats.timeStats.cardsWithTime} cards tracked`}
-                iconColor="text-cyan-500"
+                iconColor="text-cyan-600 dark:text-cyan-400"
               />
               <div className="flex items-center gap-6">
                 <CompletionRing
@@ -440,7 +444,7 @@ export function BoardAnalytics({ boardId }: BoardAnalyticsProps) {
                 <div className="flex-1 space-y-3">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                      <Clock className="h-3.5 w-3.5 text-slate-400" />
+                      <Clock className="h-3.5 w-3.5 text-slate-500 dark:text-slate-400" />
                       <span className="text-muted-foreground text-xs">Estimated</span>
                     </div>
                     <span className="font-semibold">
@@ -449,7 +453,7 @@ export function BoardAnalytics({ boardId }: BoardAnalyticsProps) {
                   </div>
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                      <Timer className="h-3.5 w-3.5 text-cyan-500" />
+                      <Timer className="h-3.5 w-3.5 text-cyan-600 dark:text-cyan-400" />
                       <span className="text-muted-foreground text-xs">Spent</span>
                     </div>
                     <span className="font-semibold">{formatTime(stats.timeStats.totalSpent)}</span>
@@ -482,7 +486,7 @@ export function BoardAnalytics({ boardId }: BoardAnalyticsProps) {
                 icon={Zap}
                 title="Story Points"
                 subtitle="By workflow status"
-                iconColor="text-indigo-500"
+                iconColor="text-indigo-600 dark:text-indigo-400"
               />
               <div className="flex items-center gap-6">
                 <CompletionRing
@@ -538,7 +542,7 @@ export function BoardAnalytics({ boardId }: BoardAnalyticsProps) {
                 icon={Users}
                 title="Team Workload"
                 subtitle={`${totalAssigned} assigned cards`}
-                iconColor="text-violet-500"
+                iconColor="text-violet-600 dark:text-violet-400"
               />
               <div className="space-y-2">
                 {stats.assigneeStats.slice(0, 6).map((stat, index) => (
@@ -562,7 +566,11 @@ export function BoardAnalytics({ boardId }: BoardAnalyticsProps) {
           {/* Cards per Column */}
           {stats.cardsPerColumn.length > 0 && (
             <div className="bg-card rounded-xl border p-4">
-              <SectionHeader icon={Layers} title="Cards by Column" iconColor="text-indigo-500" />
+              <SectionHeader
+                icon={Layers}
+                title="Cards by Column"
+                iconColor="text-indigo-600 dark:text-indigo-400"
+              />
               <div className="h-[160px]">
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart
@@ -614,7 +622,11 @@ export function BoardAnalytics({ boardId }: BoardAnalyticsProps) {
           {/* Labels */}
           {stats.labelStats.length > 0 && (
             <div className="bg-card rounded-xl border p-4">
-              <SectionHeader icon={Tag} title="By Label" iconColor="text-orange-500" />
+              <SectionHeader
+                icon={Tag}
+                title="By Label"
+                iconColor="text-orange-600 dark:text-orange-400"
+              />
               <div className="h-[140px]">
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart
@@ -651,24 +663,28 @@ export function BoardAnalytics({ boardId }: BoardAnalyticsProps) {
 
           {/* Due Date Summary */}
           <div className="bg-card rounded-xl border p-4">
-            <SectionHeader icon={Calendar} title="Due Dates" iconColor="text-sky-500" />
+            <SectionHeader
+              icon={Calendar}
+              title="Due Dates"
+              iconColor="text-sky-600 dark:text-sky-400"
+            />
             <div className="grid grid-cols-3 gap-3">
-              <div className="rounded-lg bg-red-500/10 p-3 text-center">
-                <AlertTriangle className="mx-auto h-5 w-5 text-red-500" />
-                <p className="mt-1 text-xl font-bold text-red-600 dark:text-red-400">
+              <div className="rounded-lg bg-red-100 p-3 text-center dark:bg-red-900/30">
+                <AlertTriangle className="mx-auto h-5 w-5 text-red-600 dark:text-red-400" />
+                <p className="mt-1 text-xl font-bold text-red-700 dark:text-red-400">
                   {stats.dueDateStats.overdue}
                 </p>
                 <p className="text-muted-foreground text-[10px]">Overdue</p>
               </div>
-              <div className="rounded-lg bg-amber-500/10 p-3 text-center">
-                <Calendar className="mx-auto h-5 w-5 text-amber-500" />
-                <p className="mt-1 text-xl font-bold text-amber-600 dark:text-amber-400">
+              <div className="rounded-lg bg-amber-100 p-3 text-center dark:bg-amber-900/30">
+                <Calendar className="mx-auto h-5 w-5 text-amber-600 dark:text-amber-400" />
+                <p className="mt-1 text-xl font-bold text-amber-700 dark:text-amber-400">
                   {stats.dueDateStats.dueThisWeek}
                 </p>
                 <p className="text-muted-foreground text-[10px]">This Week</p>
               </div>
-              <div className="rounded-lg bg-slate-500/10 p-3 text-center">
-                <Clock className="mx-auto h-5 w-5 text-slate-400" />
+              <div className="rounded-lg bg-slate-100 p-3 text-center dark:bg-slate-800">
+                <Clock className="mx-auto h-5 w-5 text-slate-500 dark:text-slate-400" />
                 <p className="mt-1 text-xl font-bold">{stats.dueDateStats.noDueDate}</p>
                 <p className="text-muted-foreground text-[10px]">No Date</p>
               </div>
