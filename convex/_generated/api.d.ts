@@ -9,6 +9,7 @@
  */
 
 import type * as activities from "../activities.js";
+import type * as admin from "../admin.js";
 import type * as analytics from "../analytics.js";
 import type * as auth from "../auth.js";
 import type * as boards from "../boards.js";
@@ -21,6 +22,7 @@ import type * as labels from "../labels.js";
 import type * as lib_auth from "../lib/auth.js";
 import type * as messages from "../messages.js";
 import type * as notifications from "../notifications.js";
+import type * as setupAdmin from "../setupAdmin.js";
 import type * as typing from "../typing.js";
 import type * as users from "../users.js";
 
@@ -32,6 +34,7 @@ import type {
 
 declare const fullApi: ApiFromModules<{
   activities: typeof activities;
+  admin: typeof admin;
   analytics: typeof analytics;
   auth: typeof auth;
   boards: typeof boards;
@@ -44,6 +47,7 @@ declare const fullApi: ApiFromModules<{
   "lib/auth": typeof lib_auth;
   messages: typeof messages;
   notifications: typeof notifications;
+  setupAdmin: typeof setupAdmin;
   typing: typeof typing;
   users: typeof users;
 }>;
