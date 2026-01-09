@@ -89,7 +89,7 @@ export function BoardPage() {
   const [membersOpen, setMembersOpen] = useState(false);
   const [activityOpen, setActivityOpen] = useState(false);
   const [analyticsOpen, setAnalyticsOpen] = useState(false);
-  const [chatState, setChatState] = useState<"hidden" | "minimized" | "expanded">("minimized");
+  const [chatOpen, setChatOpen] = useState(false);
   const [quickAddOpen, setQuickAddOpen] = useState(false);
   const [quickAddColumnId, setQuickAddColumnId] = useState<Id<"columns"> | null>(null);
   const [quickAddTitle, setQuickAddTitle] = useState("");
@@ -123,7 +123,7 @@ export function BoardPage() {
     const shouldOpenMembers = searchParams.get("members") === "true";
 
     if (shouldOpenChat) {
-      setChatState("expanded");
+      setChatOpen(true);
       searchParams.delete("chat");
       setSearchParams(searchParams, { replace: true });
     }
@@ -195,7 +195,7 @@ export function BoardPage() {
       },
       openDeleteBoard: isOwner ? () => setDeleteOpen(true) : undefined,
       openMembersModal: () => setMembersOpen(true),
-      toggleChat: () => setChatState((prev) => (prev === "expanded" ? "minimized" : "expanded")),
+      toggleChat: () => setChatOpen((prev) => !prev),
       createCard: openQuickAddCard,
       focusSearch: () => {
         searchInputRef.current?.focus();
@@ -561,7 +561,7 @@ export function BoardPage() {
       />
 
       {/* Team Chat */}
-      <BoardChat boardId={board._id} state={chatState} onStateChange={setChatState} />
+      <BoardChat boardId={board._id} open={chatOpen} onOpenChange={setChatOpen} />
 
       {/* Edit Dialog */}
       <Dialog open={editOpen} onOpenChange={setEditOpen}>

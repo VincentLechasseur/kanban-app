@@ -2,9 +2,11 @@ import { useState, useRef, useEffect, useMemo, useCallback } from "react";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "../../../convex/_generated/api";
 import type { Doc, Id } from "../../../convex/_generated/dataModel";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { UserAvatar } from "@/components/UserAvatar";
 import { CardModal } from "@/components/board/CardModal";
 import { Spinner } from "@/components/ui/spinner";
@@ -14,31 +16,24 @@ import {
   User,
   StickyNote,
   MessageCircle,
-  Minus,
-  X,
-  GripHorizontal,
   Users,
   Pencil,
   Trash2,
   Search,
   Check,
+  X,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface BoardChatProps {
   boardId: Id<"boards">;
-  state: "hidden" | "minimized" | "expanded";
-  onStateChange: (state: "hidden" | "minimized" | "expanded") => void;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
 }
 
 type MentionType = "user" | "card" | null;
 
-const MIN_HEIGHT = 200;
-const MAX_HEIGHT_VH = 70;
-const DEFAULT_HEIGHT = 350;
-const STORAGE_KEY = "boardChatHeight";
-
-export function BoardChat({ boardId, state, onStateChange }: BoardChatProps) {
+export function BoardChat({ boardId, open, onOpenChange }: BoardChatProps) {
   const messages = useQuery(api.messages.list, { boardId });
   const currentUser = useQuery(api.users.currentUser);
   const members = useQuery(api.boards.getMembers, { boardId });
@@ -79,83 +74,38 @@ export function BoardChat({ boardId, state, onStateChange }: BoardChatProps) {
 
   // Typing indicator debounce
   const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const [height, setHeight] = useState(() => {
-    if (typeof window === "undefined") return DEFAULT_HEIGHT;
-    return parseInt(localStorage.getItem(STORAGE_KEY) ?? String(DEFAULT_HEIGHT));
-  });
-  const [isResizing, setIsResizing] = useState(false);
-  const [isAnimating, setIsAnimating] = useState(false);
 
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
-  const drawerRef = useRef<HTMLDivElement>(null);
 
-  // Mark as read when chat is expanded
+  // Mark as read when chat is opened
   useEffect(() => {
-    if (state === "expanded") {
+    if (open) {
       markAsRead({ boardId });
     }
-  }, [state, boardId, markAsRead]);
+  }, [open, boardId, markAsRead]);
 
   // Scroll to bottom when messages change
   useEffect(() => {
-    if (scrollContainerRef.current && state === "expanded") {
+    if (scrollContainerRef.current && open) {
       scrollContainerRef.current.scrollTop = scrollContainerRef.current.scrollHeight;
     }
-  }, [messages, state]);
+  }, [messages, open]);
 
-  // Scroll to bottom when chat expands (after animation)
+  // Focus input when modal opens
   useEffect(() => {
-    if (state === "expanded") {
-      setIsAnimating(true);
+    if (open) {
       const timer = setTimeout(() => {
-        setIsAnimating(false);
-        if (scrollContainerRef.current) {
-          scrollContainerRef.current.scrollTop = scrollContainerRef.current.scrollHeight;
-        }
         inputRef.current?.focus();
-      }, 300);
+      }, 100);
       return () => clearTimeout(timer);
     }
-  }, [state]);
+  }, [open]);
 
   // Reset selected index when mention search changes
   useEffect(() => {
     setSelectedIndex(0);
   }, [mentionSearch, mentionType]);
-
-  // Persist height to localStorage
-  useEffect(() => {
-    localStorage.setItem(STORAGE_KEY, String(height));
-  }, [height]);
-
-  // Handle resize drag
-  const handleResizeStart = useCallback(
-    (e: React.MouseEvent) => {
-      e.preventDefault();
-      setIsResizing(true);
-
-      const startY = e.clientY;
-      const startHeight = height;
-      const maxHeight = window.innerHeight * (MAX_HEIGHT_VH / 100);
-
-      const handleMouseMove = (e: MouseEvent) => {
-        const deltaY = startY - e.clientY;
-        const newHeight = Math.min(Math.max(startHeight + deltaY, MIN_HEIGHT), maxHeight);
-        setHeight(newHeight);
-      };
-
-      const handleMouseUp = () => {
-        setIsResizing(false);
-        document.removeEventListener("mousemove", handleMouseMove);
-        document.removeEventListener("mouseup", handleMouseUp);
-      };
-
-      document.addEventListener("mousemove", handleMouseMove);
-      document.addEventListener("mouseup", handleMouseUp);
-    },
-    [height]
-  );
 
   // Filter suggestions based on search (exclude current user from mentions)
   const userSuggestions = useMemo(() => {
@@ -285,15 +235,13 @@ export function BoardChat({ boardId, state, onStateChange }: BoardChatProps) {
     setSearchQuery("");
     setHighlightedMessageId(messageId);
 
-    // Wait for search panel to close, then scroll
     setTimeout(() => {
       const messageElement = document.querySelector(`[data-message-id="${messageId}"]`);
-      if (messageElement && scrollContainerRef.current) {
+      if (messageElement) {
         messageElement.scrollIntoView({ behavior: "smooth", block: "center" });
       }
     }, 100);
 
-    // Clear highlight after animation
     setTimeout(() => {
       setHighlightedMessageId(null);
     }, 2000);
@@ -314,7 +262,6 @@ export function BoardChat({ boardId, state, onStateChange }: BoardChatProps) {
     const value = e.target.value;
     setContent(value);
 
-    // Trigger typing indicator
     if (value.trim()) {
       triggerTyping();
     }
@@ -425,8 +372,6 @@ export function BoardChat({ boardId, state, onStateChange }: BoardChatProps) {
     } else if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
       handleSend();
-    } else if (e.key === "Escape") {
-      onStateChange("minimized");
     }
   };
 
@@ -479,9 +424,10 @@ export function BoardChat({ boardId, state, onStateChange }: BoardChatProps) {
         return (
           <button
             key={i}
-            className={`font-semibold underline decoration-2 underline-offset-2 hover:opacity-80 ${
-              isOwn ? "text-primary-foreground" : "text-foreground"
-            }`}
+            className={cn(
+              "font-semibold underline decoration-2 underline-offset-2 transition-opacity hover:opacity-70",
+              isOwn ? "text-white" : "text-foreground"
+            )}
             onClick={(e) => {
               e.stopPropagation();
               handleCardMentionClick(cardTitle);
@@ -495,9 +441,10 @@ export function BoardChat({ boardId, state, onStateChange }: BoardChatProps) {
         return (
           <button
             key={i}
-            className={`font-semibold underline decoration-2 underline-offset-2 hover:opacity-80 ${
-              isOwn ? "text-primary-foreground" : "text-foreground"
-            }`}
+            className={cn(
+              "font-semibold underline decoration-2 underline-offset-2 transition-opacity hover:opacity-70",
+              isOwn ? "text-white" : "text-foreground"
+            )}
             onClick={(e) => {
               e.stopPropagation();
               handleCardMentionClick(cardTitle);
@@ -508,10 +455,7 @@ export function BoardChat({ boardId, state, onStateChange }: BoardChatProps) {
         );
       } else if (part.startsWith("@[") || part.startsWith("@")) {
         return (
-          <span
-            key={i}
-            className={`font-semibold ${isOwn ? "text-primary-foreground" : "text-foreground"}`}
-          >
+          <span key={i} className={cn("font-semibold", isOwn ? "text-white" : "text-foreground")}>
             {part}
           </span>
         );
@@ -520,148 +464,118 @@ export function BoardChat({ boardId, state, onStateChange }: BoardChatProps) {
     });
   };
 
-  // Don't render if hidden
-  if (state === "hidden") return null;
-
   return (
     <>
-      {/* Minimized Pill */}
-      {state === "minimized" && (
-        <button
-          onClick={() => onStateChange("expanded")}
-          className={cn(
-            "fixed right-6 bottom-6 z-50",
-            "bg-primary text-primary-foreground",
-            "flex items-center gap-2 rounded-full px-4 py-2.5",
-            "shadow-lg transition-all duration-200",
-            "hover:scale-105 hover:shadow-xl",
-            "focus:ring-ring focus:ring-2 focus:ring-offset-2 focus:outline-none"
-          )}
-        >
-          <MessageCircle className="h-5 w-5" />
-          <span className="text-sm font-medium">Team Chat</span>
-          {hasUnread && (
-            <span className="bg-destructive flex h-5 min-w-5 items-center justify-center rounded-full px-1.5 text-xs font-bold text-white">
-              {messages?.filter((m) => m.userId !== currentUser?._id).length ?? ""}
-            </span>
-          )}
-        </button>
-      )}
-
-      {/* Expanded Drawer */}
-      {state === "expanded" && (
-        <div
-          ref={drawerRef}
-          style={{ height: `${height}px` }}
-          className={cn(
-            "fixed inset-x-0 bottom-0 z-50",
-            "bg-background border-t shadow-2xl",
-            "flex flex-col",
-            "lg:left-64", // Account for sidebar on desktop
-            isAnimating && "animate-in slide-in-from-bottom duration-300",
-            !isResizing && "transition-[height] duration-100"
-          )}
-        >
-          {/* Resize Handle / Header */}
-          <div
-            onMouseDown={handleResizeStart}
-            className={cn(
-              "flex shrink-0 cursor-ns-resize items-center justify-between border-b px-4 py-2",
-              "bg-muted/50 hover:bg-muted transition-colors",
-              "select-none"
-            )}
-          >
-            {/* Drag indicator */}
-            <div className="flex flex-1 items-center justify-center">
-              <GripHorizontal className="text-muted-foreground h-5 w-5" />
-            </div>
-
-            {/* Title and member count */}
-            <div className="flex flex-1 items-center justify-center gap-2">
-              <MessageCircle className="h-4 w-4" />
-              <span className="font-semibold">Team Chat</span>
-              {members && (
-                <span className="text-muted-foreground flex items-center gap-1 text-sm">
-                  <Users className="h-3 w-3" />
-                  {members.length}
+      {/* Floating Chat Button */}
+      <TooltipProvider>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <button
+              onClick={() => onOpenChange(true)}
+              className={cn(
+                "fixed right-6 bottom-6 z-40",
+                "flex h-14 w-14 items-center justify-center rounded-full",
+                "bg-primary text-primary-foreground",
+                "shadow-lg transition-all duration-200",
+                "hover:scale-105 hover:shadow-xl",
+                "focus:ring-ring focus:ring-2 focus:ring-offset-2 focus:outline-none"
+              )}
+            >
+              <MessageCircle className="h-6 w-6" />
+              {hasUnread && (
+                <span className="absolute -top-1 -right-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-red-500 px-1.5 text-xs font-bold text-white">
+                  {messages?.filter((m) => m.userId !== currentUser?._id).length ?? ""}
                 </span>
               )}
-            </div>
+            </button>
+          </TooltipTrigger>
+          <TooltipContent side="left">
+            <p>Team Chat</p>
+          </TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
 
-            {/* Action buttons */}
-            <div className="flex flex-1 items-center justify-end gap-1">
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-7 w-7"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setSearchOpen(!searchOpen);
-                      }}
-                    >
-                      <Search className="h-4 w-4" />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>Search messages</TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-7 w-7"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onStateChange("minimized");
-                      }}
-                    >
-                      <Minus className="h-4 w-4" />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>Minimize</TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-7 w-7"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onStateChange("hidden");
-                      }}
-                    >
-                      <X className="h-4 w-4" />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>Close</TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
+      {/* Chat Modal */}
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent className="flex h-[80vh] max-h-[700px] w-full max-w-2xl flex-col gap-0 overflow-hidden p-0">
+          {/* Header */}
+          <DialogHeader className="flex-shrink-0 border-b px-6 py-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-blue-500 to-indigo-600">
+                  <MessageCircle className="h-5 w-5 text-white" />
+                </div>
+                <div>
+                  <DialogTitle className="text-lg font-semibold">Team Chat</DialogTitle>
+                  <p className="text-muted-foreground flex items-center gap-1.5 text-sm">
+                    <Users className="h-3.5 w-3.5" />
+                    {members?.length ?? 0} members
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-1">
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant={searchOpen ? "secondary" : "ghost"}
+                        size="icon"
+                        className="h-9 w-9"
+                        onClick={() => setSearchOpen(!searchOpen)}
+                      >
+                        <Search className="h-4 w-4" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>Search messages</TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button variant="ghost" size="icon" className="h-9 w-9">
+                        <HelpCircle className="h-4 w-4" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent side="bottom" className="max-w-xs">
+                      <div className="space-y-2 text-sm">
+                        <p className="font-semibold">Shortcuts</p>
+                        <div className="flex items-center gap-2">
+                          <kbd className="rounded border bg-zinc-100 px-1.5 py-0.5 font-mono text-xs dark:bg-zinc-800">
+                            @
+                          </kbd>
+                          <span>Mention a team member</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <kbd className="rounded border bg-zinc-100 px-1.5 py-0.5 font-mono text-xs dark:bg-zinc-800">
+                            !
+                          </kbd>
+                          <span>Reference a card</span>
+                        </div>
+                      </div>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              </div>
             </div>
-          </div>
+          </DialogHeader>
 
           {/* Search Panel */}
           {searchOpen && (
-            <div className="bg-muted/30 shrink-0 border-b p-3">
+            <div className="flex-shrink-0 border-b bg-zinc-50/50 p-4 dark:bg-zinc-900/50">
               <div className="flex gap-2">
-                <Input
-                  placeholder="Search messages..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="h-8"
-                  autoFocus
-                />
+                <div className="relative flex-1">
+                  <Search className="text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
+                  <Input
+                    placeholder="Search messages..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="pl-9"
+                    autoFocus
+                  />
+                </div>
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="h-8 w-8 shrink-0"
                   onClick={() => {
                     setSearchOpen(false);
                     setSearchQuery("");
@@ -671,21 +585,21 @@ export function BoardChat({ boardId, state, onStateChange }: BoardChatProps) {
                 </Button>
               </div>
               {searchQuery.trim() && (
-                <div className="mt-2 max-h-48 overflow-y-auto">
+                <div className="mt-3 max-h-48 overflow-y-auto">
                   {searchResults === undefined ? (
-                    <div className="flex items-center justify-center py-2">
+                    <div className="flex items-center justify-center py-4">
                       <Spinner size="sm" />
                     </div>
                   ) : searchResults.length === 0 ? (
-                    <p className="text-muted-foreground py-2 text-center text-sm">
+                    <p className="text-muted-foreground py-4 text-center text-sm">
                       No messages found
                     </p>
                   ) : (
                     <div className="space-y-1">
                       {searchResults.map((result) => (
-                        <div
+                        <button
                           key={result._id}
-                          className="bg-background hover:bg-accent cursor-pointer rounded-md p-2 text-sm"
+                          className="hover:bg-accent w-full cursor-pointer rounded-lg p-3 text-left transition-colors"
                           onClick={() => scrollToMessage(result._id)}
                         >
                           <div className="text-muted-foreground mb-1 flex items-center gap-2 text-xs">
@@ -695,8 +609,8 @@ export function BoardChat({ boardId, state, onStateChange }: BoardChatProps) {
                             <span>·</span>
                             <span>{formatDate(result.createdAt)}</span>
                           </div>
-                          <p className="truncate">{result.content}</p>
-                        </div>
+                          <p className="truncate text-sm">{result.content}</p>
+                        </button>
                       ))}
                     </div>
                   )}
@@ -706,167 +620,204 @@ export function BoardChat({ boardId, state, onStateChange }: BoardChatProps) {
           )}
 
           {/* Messages Area */}
-          <div ref={scrollContainerRef} className="flex-1 overflow-y-auto px-4">
-            {messages === undefined ? (
-              <div className="flex h-full items-center justify-center py-8">
-                <Spinner />
-              </div>
-            ) : messages.length === 0 ? (
-              <div className="flex h-full items-center justify-center py-8">
-                <p className="text-muted-foreground text-center text-sm">
-                  No messages yet. Start the conversation!
-                </p>
-              </div>
-            ) : (
-              <div className="space-y-4 py-4">
-                {groupedMessages.map((group) => (
-                  <div key={group.date}>
-                    <div className="mb-2 flex justify-center">
-                      <span className="bg-muted text-muted-foreground rounded-full px-3 py-1 text-xs">
-                        {group.date}
-                      </span>
-                    </div>
-                    <div className="space-y-3">
-                      {group.messages.map((message) => {
-                        const isOwn = message.userId === currentUser?._id;
-                        const isEditing = editingMessageId === message._id;
-                        const isDeleted = message.isDeleted;
-                        const isHighlighted = highlightedMessageId === message._id;
+          <ScrollArea className="flex-1">
+            <div ref={scrollContainerRef} className="p-6">
+              {messages === undefined ? (
+                <div className="flex h-64 items-center justify-center">
+                  <Spinner />
+                </div>
+              ) : messages.length === 0 ? (
+                <div className="flex h-64 flex-col items-center justify-center text-center">
+                  <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-br from-blue-100 to-indigo-100 dark:from-blue-900/30 dark:to-indigo-900/30">
+                    <MessageCircle className="h-8 w-8 text-blue-600 dark:text-blue-400" />
+                  </div>
+                  <h3 className="mb-1 font-medium">No messages yet</h3>
+                  <p className="text-muted-foreground text-sm">
+                    Start a conversation with your team
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-6">
+                  {groupedMessages.map((group) => (
+                    <div key={group.date}>
+                      {/* Date divider */}
+                      <div className="relative mb-4 flex items-center justify-center">
+                        <div className="bg-border absolute inset-x-0 h-px" />
+                        <span className="bg-background text-muted-foreground relative px-3 text-xs font-medium">
+                          {group.date}
+                        </span>
+                      </div>
 
-                        return (
-                          <div
-                            key={message._id}
-                            data-message-id={message._id}
-                            className={cn(
-                              "group flex gap-2",
-                              isOwn ? "flex-row-reverse" : "",
-                              isHighlighted &&
-                                "-m-2 animate-pulse rounded-lg bg-yellow-100 p-2 dark:bg-yellow-900/30"
-                            )}
-                          >
-                            <UserAvatar
-                              userId={message.user._id}
-                              name={message.user.name}
-                              email={message.user.email}
-                              image={message.user.image}
-                              className="h-8 w-8 shrink-0"
-                              fallbackClassName="text-xs"
-                            />
+                      {/* Messages for this date */}
+                      <div className="space-y-4">
+                        {group.messages.map((message) => {
+                          const isOwn = message.userId === currentUser?._id;
+                          const isEditing = editingMessageId === message._id;
+                          const isDeleted = message.isDeleted;
+                          const isHighlighted = highlightedMessageId === message._id;
+
+                          return (
                             <div
-                              className={`flex max-w-[70%] flex-col ${isOwn ? "items-end" : ""}`}
+                              key={message._id}
+                              data-message-id={message._id}
+                              className={cn(
+                                "group flex gap-3",
+                                isOwn && "flex-row-reverse",
+                                isHighlighted &&
+                                  "animate-pulse rounded-lg bg-yellow-100/50 p-2 dark:bg-yellow-900/20"
+                              )}
                             >
-                              {isDeleted ? (
-                                <div className="bg-muted/50 rounded-lg border border-dashed px-3 py-2">
-                                  <p className="text-muted-foreground text-sm italic">
-                                    This message was deleted
-                                  </p>
-                                </div>
-                              ) : isEditing ? (
-                                <div className="flex flex-col gap-2">
-                                  <Input
-                                    value={editContent}
-                                    onChange={(e) => setEditContent(e.target.value)}
-                                    onKeyDown={(e) => {
-                                      if (e.key === "Enter") {
-                                        e.preventDefault();
-                                        saveEdit();
-                                      } else if (e.key === "Escape") {
-                                        cancelEditing();
-                                      }
-                                    }}
-                                    className="h-8 text-sm"
-                                    autoFocus
-                                  />
-                                  <div className="flex gap-1">
-                                    <Button
-                                      size="sm"
-                                      variant="ghost"
-                                      className="h-6 px-2"
-                                      onClick={cancelEditing}
-                                    >
-                                      Cancel
-                                    </Button>
-                                    <Button
-                                      size="sm"
-                                      className="h-6 px-2"
-                                      onClick={saveEdit}
-                                      disabled={!editContent.trim()}
-                                    >
-                                      <Check className="mr-1 h-3 w-3" />
-                                      Save
-                                    </Button>
-                                  </div>
-                                </div>
-                              ) : (
-                                <div className="relative">
-                                  <div
-                                    className={`rounded-lg px-3 py-2 ${
-                                      isOwn ? "bg-primary text-primary-foreground" : "bg-muted"
-                                    }`}
-                                  >
-                                    <p className="text-sm break-words whitespace-pre-wrap">
-                                      {renderMessageContent(message.content, isOwn)}
+                              <UserAvatar
+                                userId={message.user._id}
+                                name={message.user.name}
+                                email={message.user.email}
+                                image={message.user.image}
+                                className="h-9 w-9 flex-shrink-0 ring-2 ring-white dark:ring-zinc-900"
+                                fallbackClassName="text-xs"
+                              />
+                              <div
+                                className={cn("flex max-w-[75%] flex-col", isOwn && "items-end")}
+                              >
+                                {/* Sender name */}
+                                <span
+                                  className={cn(
+                                    "text-muted-foreground mb-1 text-xs font-medium",
+                                    isOwn && "text-right"
+                                  )}
+                                >
+                                  {message.user.name ?? message.user.email}
+                                </span>
+
+                                {isDeleted ? (
+                                  <div className="rounded-2xl border border-dashed bg-zinc-100/50 px-4 py-2.5 dark:bg-zinc-800/50">
+                                    <p className="text-muted-foreground text-sm italic">
+                                      Message deleted
                                     </p>
                                   </div>
-                                  {/* Edit/Delete buttons - show on hover for own messages */}
-                                  {isOwn && (
-                                    <div
-                                      className={`absolute top-1/2 -left-16 flex -translate-y-1/2 gap-0.5 opacity-0 transition-opacity group-hover:opacity-100`}
-                                    >
+                                ) : isEditing ? (
+                                  <div className="flex flex-col gap-2">
+                                    <Input
+                                      value={editContent}
+                                      onChange={(e) => setEditContent(e.target.value)}
+                                      onKeyDown={(e) => {
+                                        if (e.key === "Enter") {
+                                          e.preventDefault();
+                                          saveEdit();
+                                        } else if (e.key === "Escape") {
+                                          cancelEditing();
+                                        }
+                                      }}
+                                      className="h-9 text-sm"
+                                      autoFocus
+                                    />
+                                    <div className="flex gap-1.5">
                                       <Button
+                                        size="sm"
                                         variant="ghost"
-                                        size="icon"
-                                        className="h-6 w-6"
-                                        onClick={() => startEditing(message._id, message.content)}
+                                        className="h-7 px-2.5 text-xs"
+                                        onClick={cancelEditing}
                                       >
-                                        <Pencil className="h-3 w-3" />
+                                        Cancel
                                       </Button>
                                       <Button
-                                        variant="ghost"
-                                        size="icon"
-                                        className="hover:text-destructive h-6 w-6"
-                                        onClick={() => handleDelete(message._id)}
+                                        size="sm"
+                                        className="h-7 px-2.5 text-xs"
+                                        onClick={saveEdit}
+                                        disabled={!editContent.trim()}
                                       >
-                                        <Trash2 className="h-3 w-3" />
+                                        <Check className="mr-1 h-3 w-3" />
+                                        Save
                                       </Button>
                                     </div>
-                                  )}
-                                </div>
-                              )}
-                              {!isDeleted && !isEditing && (
-                                <span className="text-muted-foreground mt-1 text-xs">
-                                  {formatTime(message.createdAt)}
-                                  {message.editedAt && (
-                                    <span className="ml-1 italic">(edited)</span>
-                                  )}
-                                </span>
-                              )}
+                                  </div>
+                                ) : (
+                                  <div className="relative">
+                                    <div
+                                      className={cn(
+                                        "rounded-2xl px-4 py-2.5",
+                                        isOwn
+                                          ? "bg-gradient-to-br from-blue-500 to-indigo-600 text-white"
+                                          : "bg-zinc-100 dark:bg-zinc-800"
+                                      )}
+                                    >
+                                      <p className="text-sm leading-relaxed break-words whitespace-pre-wrap">
+                                        {renderMessageContent(message.content, isOwn)}
+                                      </p>
+                                    </div>
+
+                                    {/* Edit/Delete buttons */}
+                                    {isOwn && (
+                                      <div
+                                        className={cn(
+                                          "absolute top-1/2 flex -translate-y-1/2 gap-0.5 opacity-0 transition-opacity group-hover:opacity-100",
+                                          isOwn ? "-left-16" : "-right-16"
+                                        )}
+                                      >
+                                        <Button
+                                          variant="ghost"
+                                          size="icon"
+                                          className="h-7 w-7"
+                                          onClick={() => startEditing(message._id, message.content)}
+                                        >
+                                          <Pencil className="h-3.5 w-3.5" />
+                                        </Button>
+                                        <Button
+                                          variant="ghost"
+                                          size="icon"
+                                          className="hover:text-destructive h-7 w-7"
+                                          onClick={() => handleDelete(message._id)}
+                                        >
+                                          <Trash2 className="h-3.5 w-3.5" />
+                                        </Button>
+                                      </div>
+                                    )}
+                                  </div>
+                                )}
+
+                                {/* Timestamp */}
+                                {!isDeleted && !isEditing && (
+                                  <span
+                                    className={cn(
+                                      "text-muted-foreground mt-1 text-xs",
+                                      isOwn && "text-right"
+                                    )}
+                                  >
+                                    {formatTime(message.createdAt)}
+                                    {message.editedAt && (
+                                      <span className="ml-1 italic">(edited)</span>
+                                    )}
+                                  </span>
+                                )}
+                              </div>
                             </div>
-                          </div>
-                        );
-                      })}
+                          );
+                        })}
+                      </div>
                     </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </ScrollArea>
 
           {/* Input Area */}
-          <div className="shrink-0 border-t p-4">
+          <div className="flex-shrink-0 border-t bg-zinc-50/50 p-4 dark:bg-zinc-900/50">
             {/* Typing indicator */}
             {typingUsers && typingUsers.length > 0 && (
-              <div className="text-muted-foreground mb-2 flex items-center gap-2 text-sm">
-                <div className="flex gap-1">
-                  <span className="animate-bounce" style={{ animationDelay: "0ms" }}>
-                    •
-                  </span>
-                  <span className="animate-bounce" style={{ animationDelay: "150ms" }}>
-                    •
-                  </span>
-                  <span className="animate-bounce" style={{ animationDelay: "300ms" }}>
-                    •
-                  </span>
+              <div className="text-muted-foreground mb-3 flex items-center gap-2 text-sm">
+                <div className="flex gap-0.5">
+                  <span
+                    className="inline-block h-1.5 w-1.5 animate-bounce rounded-full bg-blue-500"
+                    style={{ animationDelay: "0ms" }}
+                  />
+                  <span
+                    className="inline-block h-1.5 w-1.5 animate-bounce rounded-full bg-blue-500"
+                    style={{ animationDelay: "150ms" }}
+                  />
+                  <span
+                    className="inline-block h-1.5 w-1.5 animate-bounce rounded-full bg-blue-500"
+                    style={{ animationDelay: "300ms" }}
+                  />
                 </div>
                 <span>
                   {typingUsers.length === 1
@@ -878,25 +829,26 @@ export function BoardChat({ boardId, state, onStateChange }: BoardChatProps) {
               </div>
             )}
 
-            {/* Mention suggestions popup */}
+            {/* Mention suggestions */}
             {mentionType && suggestions.length > 0 && (
-              <div className="bg-popover mb-2 max-h-48 overflow-y-auto rounded-md border p-1 shadow-md">
-                <div className="text-muted-foreground px-2 py-1.5 text-xs font-semibold">
+              <div className="bg-popover mb-3 max-h-48 overflow-y-auto rounded-xl border p-1.5 shadow-lg">
+                <div className="text-muted-foreground px-2.5 py-1.5 text-xs font-semibold tracking-wide uppercase">
                   {mentionType === "user" ? "Team Members" : "Cards"}
                 </div>
                 {mentionType === "user"
                   ? userSuggestions.map((user, index) => (
                       <button
                         key={user._id}
-                        className={`flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-none ${
+                        className={cn(
+                          "flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm transition-colors",
                           index === selectedIndex
                             ? "bg-accent text-accent-foreground"
-                            : "hover:bg-accent hover:text-accent-foreground"
-                        }`}
+                            : "hover:bg-accent/50"
+                        )}
                         onClick={() => insertMention(user.name ?? user.email ?? "")}
                       >
                         <User className="h-4 w-4" />
-                        <span>{user.name ?? user.email}</span>
+                        <span className="font-medium">{user.name ?? user.email}</span>
                         {user.name && (
                           <span className="text-muted-foreground text-xs">{user.email}</span>
                         )}
@@ -905,68 +857,46 @@ export function BoardChat({ boardId, state, onStateChange }: BoardChatProps) {
                   : cardSuggestions.map((card, index) => (
                       <button
                         key={card._id}
-                        className={`flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-none ${
+                        className={cn(
+                          "flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm transition-colors",
                           index === selectedIndex
                             ? "bg-accent text-accent-foreground"
-                            : "hover:bg-accent hover:text-accent-foreground"
-                        }`}
+                            : "hover:bg-accent/50"
+                        )}
                         onClick={() => insertMention(card.title)}
                       >
                         <StickyNote className="h-4 w-4" />
-                        <span className="truncate">{card.title}</span>
+                        <span className="truncate font-medium">{card.title}</span>
                       </button>
                     ))}
               </div>
             )}
 
-            <div className="flex gap-2">
-              <Input
-                ref={inputRef}
-                placeholder="Type @ for users, ! for cards..."
-                value={content}
-                onChange={handleInputChange}
-                onKeyDown={handleKeyDown}
-                disabled={isSending}
-              />
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button variant="ghost" size="icon" className="shrink-0">
-                      <HelpCircle className="h-4 w-4" />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent side="top" className="max-w-xs">
-                    <div className="space-y-2 text-sm">
-                      <p className="font-semibold">Shortcuts</p>
-                      <div className="flex items-center gap-2">
-                        <kbd className="border-input bg-secondary text-secondary-foreground rounded border px-1.5 py-0.5 font-mono text-xs">
-                          @
-                        </kbd>
-                        <span>Mention a team member</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <kbd className="border-input bg-secondary text-secondary-foreground rounded border px-1.5 py-0.5 font-mono text-xs">
-                          !
-                        </kbd>
-                        <span>Reference a card (clickable)</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <kbd className="border-input bg-secondary text-secondary-foreground rounded border px-1.5 py-0.5 font-mono text-xs">
-                          Esc
-                        </kbd>
-                        <span>Minimize chat</span>
-                      </div>
-                    </div>
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
-              <Button size="icon" onClick={handleSend} disabled={!content.trim() || isSending}>
-                <Send className="h-4 w-4" />
+            {/* Message input */}
+            <div className="flex items-center gap-3">
+              <div className="relative flex-1">
+                <Input
+                  ref={inputRef}
+                  placeholder="Write a message..."
+                  value={content}
+                  onChange={handleInputChange}
+                  onKeyDown={handleKeyDown}
+                  disabled={isSending}
+                  className="rounded-full border-zinc-200 bg-white py-5 pr-4 pl-4 shadow-sm dark:border-zinc-700 dark:bg-zinc-800"
+                />
+              </div>
+              <Button
+                size="icon"
+                className="h-10 w-10 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 shadow-md transition-transform hover:scale-105 hover:from-blue-600 hover:to-indigo-700"
+                onClick={handleSend}
+                disabled={!content.trim() || isSending}
+              >
+                <Send className="h-4 w-4 text-white" />
               </Button>
             </div>
           </div>
-        </div>
-      )}
+        </DialogContent>
+      </Dialog>
 
       {/* Card Modal */}
       {selectedCard && (
