@@ -6,6 +6,7 @@ import { api } from "../../convex/_generated/api";
 import { UserAvatar } from "@/components/UserAvatar";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Spinner } from "@/components/ui/spinner";
 import { Bell, CheckCheck, MessageSquare, MessageCircle, Trash2 } from "lucide-react";
 
 export function Notifications() {
@@ -69,7 +70,7 @@ export function Notifications() {
         <div className="max-h-72 overflow-y-auto">
           {notifications === undefined ? (
             <div className="flex items-center justify-center py-8">
-              <div className="border-primary h-5 w-5 animate-spin rounded-full border-2 border-t-transparent" />
+              <Spinner size="sm" />
             </div>
           ) : notifications.length === 0 ? (
             <div className="py-8 text-center">

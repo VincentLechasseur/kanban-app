@@ -2,6 +2,6 @@
   "$schema": "https://unpkg.com/knip@5/schema.json",
   "entry": ["src/main.tsx", "convex/**/*.ts"],
   "project": ["src/**/*.{ts,tsx}", "convex/**/*.ts"],
-  "ignore": ["convex/_generated/**"],
-  "ignoreDependencies": ["tw-animate-css", "globals", "@tailwindcss/vite"]
+  "ignore": ["convex/_generated/**", "src/components/ui/**"],
+  "ignoreDependencies": ["tw-animate-css", "tailwindcss", "@auth/core"]
 }

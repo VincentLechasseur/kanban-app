@@ -12,6 +12,9 @@ pre-commit:
     - name: typecheck
       run: bun run typecheck
 
+    - name: knip
+      run: bun run knip
+
 pre-push:
   jobs:
     - name: build

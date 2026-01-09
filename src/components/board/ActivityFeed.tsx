@@ -3,6 +3,7 @@ import { api } from "../../../convex/_generated/api";
 import type { Id } from "../../../convex/_generated/dataModel";
 import { UserAvatar } from "@/components/UserAvatar";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Spinner } from "@/components/ui/spinner";
 import {
   Plus,
   ArrowRight,
@@ -148,7 +149,7 @@ export function ActivityFeed({ boardId, limit = 50 }: ActivityFeedProps) {
   if (activities === undefined) {
     return (
       <div className="flex h-full items-center justify-center p-8">
-        <div className="border-primary h-6 w-6 animate-spin rounded-full border-2 border-t-transparent" />
+        <Spinner />
       </div>
     );
   }

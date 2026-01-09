@@ -7,6 +7,7 @@ import { BoardPage } from "@/pages/Board";
 import { ProfilePage } from "@/pages/Profile";
 import { MarketplacePage } from "@/pages/Marketplace";
 import { Admin } from "@/pages/Admin";
+import { Spinner } from "@/components/ui/spinner";
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { isLoading, isAuthenticated } = useConvexAuth();
@@ -14,7 +15,7 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
   if (isLoading) {
     return (
       <div className="flex h-screen items-center justify-center">
-        <div className="border-primary h-8 w-8 animate-spin rounded-full border-4 border-t-transparent" />
+        <Spinner size="lg" />
       </div>
     );
   }

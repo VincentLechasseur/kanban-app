@@ -30,6 +30,7 @@ import {
   Target,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { Spinner } from "@/components/ui/spinner";
 
 interface BoardAnalyticsProps {
   boardId: Id<"boards">;
@@ -255,7 +256,7 @@ export function BoardAnalytics({ boardId }: BoardAnalyticsProps) {
     return (
       <div className="flex h-full items-center justify-center">
         <div className="flex flex-col items-center gap-2">
-          <div className="border-primary h-8 w-8 animate-spin rounded-full border-2 border-t-transparent" />
+          <Spinner size="lg" />
           <p className="text-muted-foreground text-sm">Loading analytics...</p>
         </div>
       </div>

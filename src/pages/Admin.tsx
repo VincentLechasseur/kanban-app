@@ -41,6 +41,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
+import { Spinner } from "@/components/ui/spinner";
 
 export function Admin() {
   const isAdmin = useQuery(api.admin.isAdmin);
@@ -65,7 +66,7 @@ export function Admin() {
   if (isAdmin === undefined || stats === undefined) {
     return (
       <div className="flex h-full items-center justify-center">
-        <div className="border-primary h-6 w-6 animate-spin rounded-full border-2 border-t-transparent" />
+        <Spinner />
       </div>
     );
   }

@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { UserAvatar } from "@/components/UserAvatar";
 import { CardModal } from "@/components/board/CardModal";
+import { Spinner } from "@/components/ui/spinner";
 import {
   Send,
   HelpCircle,
@@ -673,7 +674,7 @@ export function BoardChat({ boardId, state, onStateChange }: BoardChatProps) {
                 <div className="mt-2 max-h-48 overflow-y-auto">
                   {searchResults === undefined ? (
                     <div className="flex items-center justify-center py-2">
-                      <div className="border-primary h-4 w-4 animate-spin rounded-full border-2 border-t-transparent" />
+                      <Spinner size="sm" />
                     </div>
                   ) : searchResults.length === 0 ? (
                     <p className="text-muted-foreground py-2 text-center text-sm">
@@ -708,7 +709,7 @@ export function BoardChat({ boardId, state, onStateChange }: BoardChatProps) {
           <div ref={scrollContainerRef} className="flex-1 overflow-y-auto px-4">
             {messages === undefined ? (
               <div className="flex h-full items-center justify-center py-8">
-                <div className="border-primary h-6 w-6 animate-spin rounded-full border-2 border-t-transparent" />
+                <Spinner />
               </div>
             ) : messages.length === 0 ? (
               <div className="flex h-full items-center justify-center py-8">
