@@ -22,7 +22,6 @@ import type * as labels from "../labels.js";
 import type * as lib_auth from "../lib/auth.js";
 import type * as messages from "../messages.js";
 import type * as notifications from "../notifications.js";
-import type * as setupAdmin from "../setupAdmin.js";
 import type * as typing from "../typing.js";
 import type * as users from "../users.js";
 
@@ -47,7 +46,6 @@ declare const fullApi: ApiFromModules<{
   "lib/auth": typeof lib_auth;
   messages: typeof messages;
   notifications: typeof notifications;
-  setupAdmin: typeof setupAdmin;
   typing: typeof typing;
   users: typeof users;
 }>;

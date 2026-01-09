@@ -81,6 +81,8 @@ export function BoardPage() {
   const deleteBoard = useMutation(api.boards.remove);
   const updateVisibility = useMutation(api.boards.updateVisibility);
   const createCard = useMutation(api.cards.create);
+  const preferences = useQuery(api.users.getPreferences);
+  const updatePreferences = useMutation(api.users.updatePreferences);
 
   const [editOpen, setEditOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
@@ -102,8 +104,13 @@ export function BoardPage() {
   // Filter state
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedAssigneeIds, setSelectedAssigneeIds] = useState<Set<Id<"users">>>(new Set());
-  const [compactView, setCompactView] = useState(false);
   const searchInputRef = useRef<HTMLInputElement>(null);
+
+  // Compact view from user preferences
+  const compactView = preferences?.compactView ?? false;
+  const toggleCompactView = () => {
+    updatePreferences({ compactView: !compactView });
+  };
 
   // Command palette integration
   const { registerBoardActions, clearBoardActions } = useCommandPaletteContext();
@@ -414,7 +421,7 @@ export function BoardPage() {
                   variant={compactView ? "secondary" : "ghost"}
                   size="icon"
                   className="h-8 w-8"
-                  onClick={() => setCompactView(!compactView)}
+                  onClick={toggleCompactView}
                 >
                   {compactView ? (
                     <StretchHorizontal className="h-4 w-4" />

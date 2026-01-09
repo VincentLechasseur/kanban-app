@@ -20,6 +20,7 @@ export default defineSchema({
     preferences: v.optional(
       v.object({
         sidebarCollapsed: v.optional(v.boolean()),
+        compactView: v.optional(v.boolean()),
       })
     ),
   }),

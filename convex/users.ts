@@ -121,7 +121,7 @@ export const getPreferences = query({
     if (!userId) return null;
 
     const user = await ctx.db.get(userId);
-    return user?.preferences || { sidebarCollapsed: false };
+    return user?.preferences || { sidebarCollapsed: false, compactView: false };
   },
 });
 
@@ -129,6 +129,7 @@ export const getPreferences = query({
 export const updatePreferences = mutation({
   args: {
     sidebarCollapsed: v.optional(v.boolean()),
+    compactView: v.optional(v.boolean()),
   },
   handler: async (ctx, args) => {
     const userId = await getAuthUserId(ctx);
@@ -141,6 +142,7 @@ export const updatePreferences = mutation({
     const newPrefs = {
       ...currentPrefs,
       ...(args.sidebarCollapsed !== undefined && { sidebarCollapsed: args.sidebarCollapsed }),
+      ...(args.compactView !== undefined && { compactView: args.compactView }),
     };
 
     await ctx.db.patch(userId, { preferences: newPrefs });
