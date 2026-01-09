@@ -23,9 +23,14 @@ import { CommandPaletteProvider, useCommandPaletteContext } from "@/contexts/Com
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
+const SIDEBAR_COLLAPSED_KEY = "kanban-sidebar-collapsed";
+
 function LayoutContent() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
+    const saved = localStorage.getItem(SIDEBAR_COLLAPSED_KEY);
+    return saved === "true";
+  });
   const [createOpen, setCreateOpen] = useState(false);
   const [helpOpen, setHelpOpen] = useState(false);
   const [name, setName] = useState("");
@@ -37,6 +42,13 @@ function LayoutContent() {
   const navigate = useNavigate();
 
   const { setOpen: setCommandPaletteOpen, boardActions } = useCommandPaletteContext();
+
+  // Persist sidebar collapsed state
+  const toggleSidebarCollapsed = () => {
+    const newValue = !sidebarCollapsed;
+    setSidebarCollapsed(newValue);
+    localStorage.setItem(SIDEBAR_COLLAPSED_KEY, String(newValue));
+  };
 
   // Keyboard shortcuts
   useKeyboardShortcuts({
@@ -91,7 +103,7 @@ function LayoutContent() {
           <Sidebar
             onCreateBoard={openCreateDialog}
             collapsed={sidebarCollapsed}
-            onToggleCollapse={() => setSidebarCollapsed(!sidebarCollapsed)}
+            onToggleCollapse={toggleSidebarCollapsed}
           />
         </aside>
 

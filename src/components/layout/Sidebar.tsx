@@ -1,4 +1,5 @@
 import { useQuery, useMutation } from "convex/react";
+import { api } from "../../../convex/_generated/api";
 import { useNavigate, useParams, useLocation } from "react-router-dom";
 import {
   DndContext,
@@ -17,14 +18,22 @@ import {
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { api } from "../../../convex/_generated/api";
 import type { Doc, Id } from "../../../convex/_generated/dataModel";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
-import { ChevronLeft, ChevronRight, Globe, GripVertical, Home, Kanban, Plus } from "lucide-react";
+import {
+  ChevronLeft,
+  ChevronRight,
+  Globe,
+  GripVertical,
+  Home,
+  Kanban,
+  Plus,
+  Shield,
+} from "lucide-react";
 
 interface SortableBoardItemProps {
   board: Doc<"boards">;
@@ -121,12 +130,14 @@ interface SidebarProps {
 export function Sidebar({ onCreateBoard, collapsed = false, onToggleCollapse }: SidebarProps) {
   const boards = useQuery(api.boards.list);
   const reorderBoards = useMutation(api.boards.reorder);
+  const isAdmin = useQuery(api.admin.isAdmin);
   const navigate = useNavigate();
   const location = useLocation();
   const { boardId } = useParams<{ boardId: string }>();
 
   const isHome = location.pathname === "/";
   const isMarketplace = location.pathname === "/marketplace";
+  const isAdminPage = location.pathname === "/admin";
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -184,6 +195,21 @@ export function Sidebar({ onCreateBoard, collapsed = false, onToggleCollapse }: 
               </TooltipTrigger>
               <TooltipContent side="right">Marketplace</TooltipContent>
             </Tooltip>
+            {isAdmin && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className={cn("h-10 w-10", isAdminPage && "bg-accent text-accent-foreground")}
+                    onClick={() => navigate("/admin")}
+                  >
+                    <Shield className="h-5 w-5" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="right">Admin Dashboard</TooltipContent>
+              </Tooltip>
+            )}
           </TooltipProvider>
         </div>
 
@@ -263,6 +289,19 @@ export function Sidebar({ onCreateBoard, collapsed = false, onToggleCollapse }: 
           <Globe className="mr-2 h-4 w-4" />
           Marketplace
         </Button>
+        {isAdmin && (
+          <Button
+            variant="ghost"
+            className={cn(
+              "w-full justify-start",
+              isAdminPage && "bg-accent text-accent-foreground"
+            )}
+            onClick={() => navigate("/admin")}
+          >
+            <Shield className="mr-2 h-4 w-4" />
+            Admin
+          </Button>
+        )}
       </div>
 
       <div className="px-4 py-2">

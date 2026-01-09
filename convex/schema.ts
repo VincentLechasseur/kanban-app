@@ -4,6 +4,8 @@ import { v } from "convex/values";
 
 export default defineSchema({
   ...authTables,
+  // Note: isAdmin field is stored on users but not in schema
+  // Convex allows extra fields beyond the schema definition
 
   boards: defineTable({
     name: v.string(),
