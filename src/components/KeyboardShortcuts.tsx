@@ -25,6 +25,13 @@ const SHORTCUTS = [
     ],
   },
   {
+    category: "Chat",
+    shortcuts: [
+      { keys: ["C"], description: "Open team chat (on board)" },
+      { keys: ["⌘/Ctrl", "F"], description: "Search messages (in chat)" },
+    ],
+  },
+  {
     category: "General",
     shortcuts: [
       { keys: ["⌘/Ctrl", "K"], description: "Open command palette" },
@@ -93,6 +100,7 @@ interface UseKeyboardShortcutsOptions {
   onNavigate: (path: string) => void;
   onFocusSearch?: () => void;
   onOpenCommandPalette?: () => void;
+  onOpenChat?: () => void;
   boards?: { _id: string }[];
 }
 
@@ -103,6 +111,7 @@ export function useKeyboardShortcuts({
   onNavigate,
   onFocusSearch,
   onOpenCommandPalette,
+  onOpenChat,
   boards,
 }: UseKeyboardShortcutsOptions) {
   const handleKeyDown = useCallback(
@@ -149,6 +158,14 @@ export function useKeyboardShortcuts({
           if (onNewCard) {
             event.preventDefault();
             onNewCard();
+          }
+          break;
+
+        case "c":
+        case "C":
+          if (onOpenChat) {
+            event.preventDefault();
+            onOpenChat();
           }
           break;
 
@@ -211,7 +228,16 @@ export function useKeyboardShortcuts({
           break;
       }
     },
-    [onNewBoard, onNewCard, onShowHelp, onNavigate, onFocusSearch, onOpenCommandPalette, boards]
+    [
+      onNewBoard,
+      onNewCard,
+      onShowHelp,
+      onNavigate,
+      onFocusSearch,
+      onOpenCommandPalette,
+      onOpenChat,
+      boards,
+    ]
   );
 
   useEffect(() => {

@@ -55,6 +55,7 @@ function LayoutContent() {
     onNavigate: navigate,
     onFocusSearch: boardActions.focusSearch,
     onOpenCommandPalette: () => setCommandPaletteOpen(true),
+    onOpenChat: boardActions.toggleChat,
     boards,
   });
 

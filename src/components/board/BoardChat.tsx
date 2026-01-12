@@ -70,10 +70,12 @@ export function BoardChat({ boardId, open, onOpenChange }: BoardChatProps) {
   );
 
   const [emojiPickerOpen, setEmojiPickerOpen] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
 
   const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const searchInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (open) {
@@ -97,6 +99,22 @@ export function BoardChat({ boardId, open, onOpenChange }: BoardChatProps) {
   useEffect(() => {
     setSelectedIndex(0);
   }, [mentionSearch, mentionType]);
+
+  // Handle Ctrl+F to open search when chat is open
+  useEffect(() => {
+    if (!open) return;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === "f") {
+        e.preventDefault();
+        setSearchOpen(true);
+        setTimeout(() => searchInputRef.current?.focus(), 50);
+      }
+    };
+
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [open]);
 
   const userSuggestions = useMemo(() => {
     if (mentionType !== "user" || !members || !currentUser) return [];
@@ -210,6 +228,7 @@ export function BoardChat({ boardId, open, onOpenChange }: BoardChatProps) {
   };
 
   const scrollToMessage = (messageId: Id<"messages">) => {
+    setSearchOpen(false);
     setSearchQuery("");
     setHighlightedMessageId(messageId);
     setTimeout(() => {
@@ -407,12 +426,15 @@ export function BoardChat({ boardId, open, onOpenChange }: BoardChatProps) {
       </TooltipProvider>
 
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="flex h-[85vh] max-h-[900px] w-[95vw] max-w-4xl flex-col gap-0 overflow-hidden p-0">
+        <DialogContent
+          showCloseButton={false}
+          className="flex h-[85vh] max-h-[900px] w-[95vw] max-w-4xl flex-col gap-0 overflow-hidden p-0 sm:!max-w-4xl"
+        >
           <DialogHeader className="flex-shrink-0 border-b px-4 py-3">
             <div className="flex items-center justify-between">
               <DialogTitle className="text-base font-semibold">Team Chat</DialogTitle>
               <div className="flex items-center gap-1">
-                <Popover>
+                <Popover open={searchOpen} onOpenChange={setSearchOpen}>
                   <PopoverTrigger asChild>
                     <Button variant="ghost" size="icon" className="h-8 w-8">
                       <Search className="h-4 w-4" />
@@ -420,7 +442,8 @@ export function BoardChat({ boardId, open, onOpenChange }: BoardChatProps) {
                   </PopoverTrigger>
                   <PopoverContent className="w-80 p-3" align="end">
                     <Input
-                      placeholder="Search messages..."
+                      ref={searchInputRef}
+                      placeholder="Search messages... (Ctrl+F)"
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
                       autoFocus
